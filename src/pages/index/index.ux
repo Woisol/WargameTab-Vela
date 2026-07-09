@@ -1,33 +1,36 @@
-<template>
+﻿<template>
   <div class="battle-page" onclick="handlePageInteraction">
     <div class="zone kill-zone" onclick="tapKill" onlongpress="pressKill">
       <text class="side-count">{{ killCount }}</text>
-      <text class="side-label">K</text>
     </div>
 
     <div class="center-zone">
       <div class="top-row">
-        <text class="time-pill">{{ clockText }}</text>
-        <div class="record-pill" onclick="toggleRecording">
-          <div class="{{ recordingClass }}"></div>
-          <text class="record-text">{{ recordText }}</text>
+        <div class="time-pill">
+          <text class="time-text">{{ clockText }}</text>
+          <image class="record-icon" src="{{ recordIcon }}"></image>
         </div>
       </div>
 
       <text class="date-text">{{ dateText }}</text>
       <text class="duration-text">{{ durationText }}</text>
+      <text class="error-text" if="{{ errorText }}">{{ errorText }}</text>
+
+      <div class="{{ mainActionClass }}" onclick="handleMainAction">
+        <image class="main-action-icon" src="{{ mainActionIcon }}"></image>
+      </div>
 
       <div class="ratio-block">
-        <text class="ratio-label">K / D</text>
+        <text class="ratio-label">k/d</text>
         <text class="ratio-value">{{ ratioText }}</text>
       </div>
 
-      <input class="settings-button" type="button" value="设置" onclick="openSettings" />
-      <input class="undo-button" type="button" value="Undo" onclick="openUndoPanel" />
-      <input class="finish-button" type="button" value="结束 / 历史" onclick="finishAndHistory" />
+      <div class="icon-button undo-button" onclick="openUndoPanel">
+        <image class="undo-icon" src="/common/undo.png"></image>
+      </div>
 
-      <div class="page-dots">
-        <div class="dot active-dot"></div>
+      <div class="more-button" onclick="openMorePanel">
+        <div class="dot"></div>
         <div class="dot"></div>
         <div class="dot"></div>
       </div>
@@ -35,24 +38,58 @@
 
     <div class="zone death-zone" onclick="tapDeath" onlongpress="pressDeath">
       <text class="side-count">{{ deathCount }}</text>
-      <text class="side-label">D</text>
     </div>
 
-    <div class="undo-overlay" if="{{ showUndoPanel }}">
-      <input class="overlay-action overlay-kill" type="button" value="K" onclick="decrementKill" />
-      <input class="overlay-action overlay-undo" type="button" value="Undo" onclick="undoEvent" />
-      <input
-        class="overlay-action overlay-death"
-        type="button"
-        value="D"
-        onclick="decrementDeath"
-      />
+    <div class="undo-overlay" if="{{ showUndoPanel }}" onclick="closeUndoPanel">
+      <div class="undo-actions">
+        <input
+          class="overlay-action overlay-kill"
+          type="button"
+          value="K"
+          onclick="decrementKill"
+        />
+        <div class="overlay-action overlay-undo" onclick="undoEvent">
+          <image class="overlay-undo-icon" src="/common/undo.png"></image>
+        </div>
+        <input
+          class="overlay-action overlay-death"
+          type="button"
+          value="D"
+          onclick="decrementDeath"
+        />
+      </div>
+    </div>
+
+    <div class="more-overlay" if="{{ showMorePanel }}" onclick="closeMorePanel">
+      <div class="more-actions">
+        <div class="more-action" onclick="openHistory">
+          <image class="more-icon" src="/common/history.png"></image>
+        </div>
+        <div class="more-action" onclick="openSettings">
+          <image class="more-icon" src="/common/settings.png"></image>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-overlay" if="{{ showConfirm }}">
+      <div class="confirm-dialog">
+        <text class="confirm-title">{{ confirmTitle }}</text>
+        <text class="confirm-message">{{ confirmMessage }}</text>
+        <div class="confirm-actions">
+          <input
+            class="confirm-button cancel-button"
+            type="button"
+            value="取消"
+            onclick="cancelConfirm"
+          />
+          <input class="confirm-button ok-button" type="button" value="确认" onclick="runConfirm" />
+        </div>
+      </div>
     </div>
 
     <div class="aod-page" if="{{ aodActive }}" onclick="wakeFromAod">
       <text class="aod-date">{{ dateText }}</text>
-      <text class="aod-time">{{ clockText }}</text>
-      <text class="aod-label">K / D</text>
+      <text class="aod-time">{{ aodClockText }}</text>
       <text class="aod-ratio">{{ ratioText }}</text>
       <text class="aod-summary">{{ aodSummaryText }}</text>
     </div>
@@ -79,23 +116,31 @@ export default {
     ratioText: "0.00",
     durationText: "00:00",
     clockText: "00:00",
+    aodClockText: "00:00:00",
     dateText: "",
-    recordText: "REC",
-    recordingClass: "record-dot",
+    recordIcon: "/common/record-off.png",
+    mainActionText: "开始",
+    mainActionClass: "main-action start-action",
+    mainActionIcon: "/common/play.png",
     showUndoPanel: false,
+    showMorePanel: false,
+    showConfirm: false,
+    confirmTitle: "",
+    confirmMessage: "",
+    confirmAction: "",
+    errorText: "",
     aodActive: false,
     aodSummaryText: "K 0 / D 0",
     timerId: 0,
     idleTimerId: 0,
-    isRecording: false,
     initialized: false,
     destroyed: false
   },
 
   onInit() {
     this.destroyed = false
-    this.currentSession = sessionHelper.createSession(Date.now())
     this.refreshTime()
+    this.applySession()
     this.loadSettings()
     this.loadCurrent()
     this.timerId = setInterval(this.refreshTime.bind(this), 1000)
@@ -120,8 +165,29 @@ export default {
     this.saveCurrent()
   },
 
+  handleMainAction() {
+    if (this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    if (this.currentSession) {
+      this.confirmTitle = "停止本局"
+      this.confirmMessage = "确认结束并保存本局记录？"
+      this.confirmAction = "stop"
+      this.showConfirm = true
+      return
+    }
+
+    this.currentSession = sessionHelper.createSession(Date.now())
+    this.showUndoPanel = false
+    this.showMorePanel = false
+    this.applySession()
+    this.saveCurrent()
+  },
+
   tapKill() {
-    if (!this.initialized || this.aodActive) {
+    if (!this.currentSession || this.aodActive) {
       return
     }
 
@@ -132,7 +198,7 @@ export default {
   },
 
   pressKill() {
-    if (!this.initialized || this.aodActive) {
+    if (!this.currentSession || this.aodActive) {
       return
     }
 
@@ -143,7 +209,7 @@ export default {
   },
 
   tapDeath() {
-    if (!this.initialized || this.aodActive) {
+    if (!this.currentSession || this.aodActive) {
       return
     }
 
@@ -154,7 +220,7 @@ export default {
   },
 
   pressDeath() {
-    if (!this.initialized || this.aodActive) {
+    if (!this.currentSession || this.aodActive) {
       return
     }
 
@@ -177,16 +243,17 @@ export default {
   },
 
   openUndoPanel() {
-    if (!this.initialized || this.aodActive) {
+    if (!this.currentSession || this.aodActive) {
       return
     }
 
     this.resetIdleTimer()
+    this.showMorePanel = false
     this.showUndoPanel = true
   },
 
   decrementKill() {
-    if (this.aodActive) {
+    if (!this.currentSession || this.aodActive) {
       return
     }
 
@@ -196,7 +263,7 @@ export default {
   },
 
   decrementDeath() {
-    if (this.aodActive) {
+    if (!this.currentSession || this.aodActive) {
       return
     }
 
@@ -206,7 +273,7 @@ export default {
   },
 
   undoEvent() {
-    if (this.aodActive) {
+    if (!this.currentSession || this.aodActive) {
       return
     }
 
@@ -221,73 +288,97 @@ export default {
     this.saveCurrent()
   },
 
-  toggleRecording() {
+  openMorePanel() {
     if (this.aodActive) {
       return
     }
 
     this.resetIdleTimer()
-    this.isRecording = !this.isRecording
-    this.recordText = this.isRecording ? "ON" : "REC"
-    this.recordingClass = this.isRecording ? "record-dot recording-dot" : "record-dot"
+    this.showUndoPanel = false
+    this.showMorePanel = true
   },
 
-  finishAndHistory() {
-    if (!this.initialized || this.aodActive) {
+  closeMorePanel() {
+    this.showMorePanel = false
+  },
+
+  openHistory() {
+    if (this.aodActive) {
       return
     }
 
-    this.resetIdleTimer()
+    this.showMorePanel = false
+    router.push({
+      uri: "/pages/history"
+    })
+  },
+
+  finishAndHistory() {
+    this.handleMainAction()
+  },
+
+  stopAndSave() {
+    if (!this.currentSession) {
+      return
+    }
+
     var finishedSession = sessionHelper.finishSession(this.currentSession, Date.now())
     var self = this
 
-    this.appendHistory(finishedSession, function (historySaved) {
+    this.appendHistory(finishedSession, function (saved) {
       if (self.destroyed) {
         return
       }
 
-      if (!historySaved) {
-        self.currentSession = finishedSession
-        self.applySession()
-        self.saveCurrent()
+      if (!saved) {
+        self.errorText = "保存失败"
         return
       }
 
-      self.currentSession = sessionHelper.createSession(Date.now())
+      self.errorText = ""
+      self.currentSession = null
       self.applySession()
-      self.saveCurrent(function (currentSaved) {
-        if (self.destroyed) {
-          return
-        }
-
-        if (currentSaved) {
-          router.push({
-            uri: "/pages/history"
-          })
-        }
-      })
+      self.saveCurrent()
     })
   },
 
   openSettings() {
-    if (!this.initialized || this.aodActive) {
+    if (this.aodActive) {
       return
     }
 
     this.resetIdleTimer()
+    this.showMorePanel = false
     router.push({
       uri: "/pages/settings"
     })
   },
 
-  applySession() {
-    var summary = this.currentSession.summary
+  cancelConfirm() {
+    this.showConfirm = false
+    this.confirmAction = ""
+  },
 
-    this.killCount = summary.kills
-    this.deathCount = summary.deaths
-    this.ratioText = sessionHelper.getKdRatio(summary)
-    this.aodSummaryText = "K " + summary.kills + " / D " + summary.deaths
-    this.durationText = sessionHelper.formatDuration(Date.now() - this.currentSession.startTime)
+  runConfirm() {
+    if (this.confirmAction === "stop") {
+      this.stopAndSave()
+    }
+
+    this.cancelConfirm()
+  },
+
+  applySession() {
+    var display = sessionHelper.createDisplaySummary(this.currentSession, Date.now())
+
+    this.killCount = display.kills
+    this.deathCount = display.deaths
+    this.ratioText = display.ratioText
+    this.durationText = display.durationText
+    this.aodSummaryText = display.aodSummaryText
+    this.recordIcon = display.running ? "/common/record-on.png" : "/common/record-off.png"
+    this.mainActionText = display.running ? "停止" : "开始"
+    this.mainActionClass = display.running ? "main-action stop-action" : "main-action start-action"
+    this.mainActionIcon = display.running ? "/common/stop.png" : "/common/play.png"
   },
 
   refreshTime() {
@@ -296,11 +387,10 @@ export default {
     var day = now.getDate()
 
     this.clockText = this.pad(now.getHours()) + ":" + this.pad(now.getMinutes())
-    this.dateText = month + "月" + day + "日"
+    this.aodClockText = this.clockText + ":" + this.pad(now.getSeconds())
+    this.dateText = now.getFullYear() + "-" + this.pad(month) + "-" + this.pad(day)
 
-    if (this.currentSession) {
-      this.durationText = sessionHelper.formatDuration(Date.now() - this.currentSession.startTime)
-    }
+    this.applySession()
   },
 
   pad(value) {
@@ -317,7 +407,7 @@ export default {
 
       var savedSettings = self.parseJson(value)
 
-      self.settings = self.cleanSettings(savedSettings)
+      self.settings = sessionHelper.normalizeSettings(savedSettings)
 
       if (!self.settings.aodEnabled) {
         self.aodActive = false
@@ -337,9 +427,7 @@ export default {
 
       var savedSession = self.parseJson(value)
 
-      if (self.isValidCurrentSession(savedSession)) {
-        self.currentSession = savedSession
-      }
+      self.currentSession = self.isValidCurrentSession(savedSession) ? savedSession : null
 
       self.applySession()
       self.initialized = true
@@ -348,7 +436,11 @@ export default {
   },
 
   saveCurrent(done) {
-    this.writeStorage(CURRENT_KEY, JSON.stringify(this.currentSession), done)
+    this.writeStorage(
+      CURRENT_KEY,
+      this.currentSession ? JSON.stringify(this.currentSession) : "",
+      done
+    )
   },
 
   appendHistory(session, done) {
@@ -478,6 +570,8 @@ export default {
     }
 
     this.showUndoPanel = false
+    this.showMorePanel = false
+    this.showConfirm = false
     this.aodActive = true
   },
 
@@ -486,34 +580,6 @@ export default {
       clearTimeout(this.idleTimerId)
       this.idleTimerId = 0
     }
-  },
-
-  cleanSettings(value) {
-    var defaults = sessionHelper.defaultSettings()
-    var saved = value || {}
-    var settings = Object.assign({}, defaults, saved)
-
-    if (["longPress", "click"].indexOf(settings.triggerMode) < 0) {
-      settings.triggerMode = defaults.triggerMode
-    }
-
-    if (["short", "double", "long", "off"].indexOf(settings.killVibration) < 0) {
-      settings.killVibration = defaults.killVibration
-    }
-
-    if (["short", "double", "long", "off"].indexOf(settings.deathVibration) < 0) {
-      settings.deathVibration = defaults.deathVibration
-    }
-
-    if (typeof settings.aodEnabled !== "boolean") {
-      settings.aodEnabled = defaults.aodEnabled
-    }
-
-    if (["simple", "detailed"].indexOf(settings.visualMode) < 0) {
-      settings.visualMode = defaults.visualMode
-    }
-
-    return settings
   },
 
   vibrate(type) {
@@ -527,6 +593,18 @@ export default {
         return
       }
 
+      if (mode === "double") {
+        vibrator.vibrate({
+          mode: "short"
+        })
+        setTimeout(function () {
+          vibrator.vibrate({
+            mode: "short"
+          })
+        }, 120)
+        return
+      }
+
       vibrator.vibrate({
         mode: mode
       })
@@ -537,14 +615,14 @@ export default {
 
 <style>
 .battle-page {
-  width: 100svw;
-  height: 100svh;
+  width: 100%;
   flex-direction: row;
+  flex: 1;
 }
 
 .zone {
   width: 180px;
-  height: 100svh;
+  flex: 1;
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -574,8 +652,7 @@ export default {
 }
 
 .center-zone {
-  width: 140px;
-  height: 500px;
+  width: 150px;
   flex-direction: column;
   align-items: center;
   background-color: #555555;
@@ -599,6 +676,12 @@ export default {
   font-size: 18px;
   text-align: center;
   line-height: 30px;
+}
+
+.top-row {
+  width: 150px;
+  justify-content: center;
+  align-items: center;
 }
 
 .record-pill {
@@ -629,14 +712,16 @@ export default {
 }
 
 .date-text {
-  margin-top: 20px;
-  font-size: 18px;
+  /* width: 120px; */
+  margin-top: 8px;
+  font-size: 16px;
   color: #f1f1f1;
   text-align: center;
 }
 
 .duration-text {
-  margin-top: 10px;
+  width: 120px;
+  margin-top: 0px;
   font-size: 24px;
   font-weight: 700;
   color: #ffffff;
@@ -719,12 +804,12 @@ export default {
   position: absolute;
   left: 0px;
   top: 0px;
-  width: 500px;
-  height: 500px;
+  right: 0px;
+  bottom: 0px;
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.72);
+  background-color: rgba(34, 34, 34, 0.75);
 }
 
 .overlay-action {
@@ -754,8 +839,8 @@ export default {
   position: absolute;
   left: 0px;
   top: 0px;
-  width: 500px;
-  height: 500px;
+  right: 0px;
+  bottom: 0px;
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -798,5 +883,350 @@ export default {
   font-size: 26px;
   color: #d8d8d8;
   text-align: center;
+}
+
+.battle-page {
+  width: 100%;
+  flex: 1;
+}
+
+.zone {
+  flex: 1;
+  width: auto;
+}
+
+.side-count {
+  font-size: 128px;
+  line-height: 155px;
+}
+
+.center-zone {
+  width: 150px;
+}
+
+.time-pill {
+  width: 96px;
+  height: 30px;
+  border-radius: 10px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  background-color: #999999;
+}
+
+.time-text {
+  width: 60px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  text-align: center;
+}
+
+.record-icon {
+  width: 20px;
+  height: 20px;
+  margin-left: 4px;
+}
+
+.main-action {
+  width: 60px;
+  height: 60px;
+  margin-top: 36px;
+  border-radius: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
+.start-action {
+  background-color: #67df79;
+}
+
+.stop-action {
+  background-color: #ff1744;
+}
+
+.main-action-icon {
+  width: 60px;
+  height: 60px;
+}
+
+.ratio-block {
+  margin-top: 10px;
+}
+
+.ratio-label {
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.ratio-value {
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 63px;
+}
+
+.icon-button {
+  justify-content: center;
+  align-items: center;
+}
+
+.undo-button {
+  width: 62px;
+  height: 56px;
+  margin-top: 10px;
+  border-radius: 10px;
+  background-color: #f5f5f5;
+}
+
+.undo-icon {
+  width: 50px;
+  height: 50px;
+}
+
+.more-button {
+  width: 65px;
+  height: 25px;
+  margin-top: 94px;
+  border-radius: 10px;
+  border-width: 1px;
+  border-color: #dbdbdb;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  margin-left: 5px;
+  margin-right: 5px;
+  border-radius: 5px;
+  background-color: #d9d9d9;
+}
+
+.undo-overlay,
+.more-overlay,
+.confirm-overlay {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  justify-content: center;
+  align-items: center;
+}
+
+.undo-overlay,
+.more-overlay {
+  background-color: rgba(34, 34, 34, 0.75);
+}
+
+.undo-overlay {
+  flex-direction: row;
+}
+
+.undo-actions {
+  width: 384px;
+  height: 106px;
+  margin-top: 84px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.overlay-action {
+  width: 95px;
+  height: 98px;
+  border-radius: 18px;
+  justify-content: center;
+  align-items: center;
+  background-color: #d9d9d9;
+  color: #000000;
+  font-size: 48px;
+  font-weight: 700;
+}
+
+.overlay-undo {
+  width: 114px;
+  height: 104px;
+}
+
+.overlay-undo-icon {
+  width: 74px;
+  height: 74px;
+}
+
+.more-actions {
+  width: 106px;
+  height: 252px;
+  margin-top: 160px;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.more-action {
+  width: 106px;
+  height: 106px;
+  border-radius: 18px;
+  justify-content: center;
+  align-items: center;
+  background-color: #d9d9d9;
+}
+
+.more-icon {
+  width: 96px;
+  height: 96px;
+}
+
+.confirm-overlay {
+  background-color: rgba(0, 0, 0, 0.68);
+}
+
+.confirm-dialog {
+  width: 360px;
+  height: 210px;
+  padding-left: 20px;
+  padding-right: 20px;
+  border-radius: 28px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #f5f5f5;
+}
+
+.confirm-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111111;
+  text-align: center;
+}
+
+.confirm-message {
+  width: 300px;
+  margin-top: 12px;
+  font-size: 20px;
+  color: #333333;
+  text-align: center;
+}
+
+.confirm-actions {
+  width: 300px;
+  height: 46px;
+  margin-top: 24px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.confirm-button {
+  width: 136px;
+  height: 46px;
+  border-radius: 23px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.cancel-button {
+  background-color: #dbdbdb;
+  color: #111111;
+}
+
+.ok-button {
+  background-color: #ff1744;
+  color: #ffffff;
+}
+
+.aod-page {
+  right: 0px;
+  bottom: 0px;
+}
+
+.aod-date {
+  font-size: 32px;
+  font-weight: 500;
+  color: #999999;
+}
+
+.aod-time {
+  margin-top: 0px;
+  font-size: 48px;
+  line-height: 58px;
+}
+
+.aod-label {
+  display: none;
+}
+
+.aod-ratio {
+  margin-top: 10px;
+  font-size: 96px;
+  font-weight: 800;
+  line-height: 116px;
+}
+
+.aod-summary {
+  margin-top: 0px;
+  font-size: 36px;
+  color: #f5f5f5;
+}
+
+.error-text {
+  width: 120px;
+  height: 20px;
+  margin-top: 4px;
+  font-size: 14px;
+  color: #ffb3b3;
+  text-align: center;
+}
+
+@media screen and (shape: circle) {
+  .battle-page {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .center-zone {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .top-row {
+    margin-top: 20px;
+  }
+
+  .side-count {
+    font-size: 96px;
+    line-height: 116px;
+  }
+
+  .date-text {
+    font-size: 14px;
+  }
+
+  .duration-text {
+    font-size: 20px;
+  }
+
+  .main-action {
+    margin-top: 24px;
+  }
+
+  .ratio-value {
+    font-size: 44px;
+    line-height: 54px;
+  }
+
+  .undo-button {
+    margin-top: 16px;
+  }
+
+  .more-button {
+    margin-top: 58px;
+  }
+
+  .confirm-dialog {
+    width: 320px;
+  }
 }
 </style>

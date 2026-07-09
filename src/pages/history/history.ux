@@ -1,5 +1,5 @@
 <template>
-  <div class="history-page">
+  <div class="history-page" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
     <div class="top-row">
       <text class="page-title">历史战绩</text>
       <text class="clock-text">{{ clockText }}</text>
@@ -11,15 +11,41 @@
       <text class="empty-text">暂无历史记录</text>
     </div>
 
-    <div class="history-list" if="{{ displayItems.length > 0 }}">
-      <div class="history-item" for="{{ displayItems }}" onclick="openReview($item.sessionId)">
-        <div class="item-main">
-          <text class="item-date">{{ $item.dateText }}</text>
-          <text class="item-status">{{ $item.statusText }}</text>
+    <list class="history-list" if="{{ displayItems.length > 0 }}">
+      <list-item
+        class="{{ $item.itemClass }}"
+        type="history"
+        for="{{ displayItems }}"
+        onclick="openReview($item.sessionId)"
+        ontouchstart="handleItemTouchStart($item.sessionId)"
+        ontouchend="handleItemTouchEnd($item.sessionId)"
+      >
+        <div class="{{ $item.itemContentClass }}">
+          <div class="item-main">
+            <text class="item-date">{{ $item.dateText }}</text>
+            <text class="item-status">{{ $item.statusText }}</text>
+          </div>
+          <text class="item-summary">k {{ $item.kills }} | d {{ $item.deaths }} | k/d {{ $item.ratioText }}</text>
         </div>
-        <text class="item-summary">k {{ $item.kills }} | d {{ $item.deaths }} | k/d {{ $item.ratioText }}</text>
+        <div
+          class="{{ $item.deleteActionClass }}"
+          if="{{ $item.deleteVisible }}"
+          onclick="confirmDelete($item.sessionId)"
+        >
+          <image class="delete-action-icon" src="/common/delete.png"></image>
+        </div>
+      </list-item>
+    </list>
+
+    <div class="confirm-overlay" if="{{ showConfirm }}">
+      <div class="confirm-dialog">
+        <text class="confirm-title">删除记录</text>
+        <text class="confirm-message">确认删除这条历史战绩？</text>
+        <div class="confirm-actions">
+          <input class="confirm-button cancel-button" type="button" value="取消" onclick="cancelDelete" />
+          <input class="confirm-button ok-button" type="button" value="删除" onclick="deleteSelected" />
+        </div>
       </div>
-      <text class="limit-text" if="{{ limitText }}">{{ limitText }}</text>
     </div>
   </div>
 </template>
@@ -27,6 +53,8 @@
 <script>
 import router from "@system.router"
 import storage from "@system.storage"
+
+var navigation = require("../../common/navigation.js")
 
 var HISTORY_KEY = "wargame_history"
 var SELECTED_KEY = "wargame_selected_session"
@@ -36,9 +64,16 @@ export default {
     history: [],
     historyItems: [],
     displayItems: [],
-    limitText: "",
     errorText: "",
+    showConfirm: false,
+    deletingSessionId: "",
+    deleteReadySessionId: "",
     clockText: "00:00",
+    touchStartX: 0,
+    touchStartY: 0,
+    itemTouchStartX: 0,
+    itemTouchStartY: 0,
+    ignoreNextBackSwipe: false,
     timerId: 0,
     destroyed: false
   },
@@ -69,6 +104,14 @@ export default {
   openReview(sessionId) {
     var selected = null
     var self = this
+
+    if (this.showConfirm || this.deleteReadySessionId === sessionId) {
+      return
+    }
+
+    if (this.deleteReadySessionId) {
+      this.setDeleteReadySession("")
+    }
 
     for (var index = 0; index < this.history.length; index += 1) {
       if (this.history[index] && this.history[index].sessionId === sessionId) {
@@ -101,6 +144,58 @@ export default {
     })
   },
 
+  confirmDelete(sessionId) {
+    if (!sessionId) {
+      return
+    }
+
+    this.deletingSessionId = sessionId
+    this.setDeleteReadySession("")
+    this.showConfirm = true
+  },
+
+  cancelDelete() {
+    this.showConfirm = false
+    this.deletingSessionId = ""
+  },
+
+  deleteSelected() {
+    var sessionId = this.deletingSessionId
+    var nextHistory = []
+    var previousHistory = this.history.slice()
+    var self = this
+
+    if (!sessionId) {
+      this.cancelDelete()
+      return
+    }
+
+    for (var index = 0; index < this.history.length; index += 1) {
+      if (this.history[index] && this.history[index].sessionId !== sessionId) {
+        nextHistory.push(this.history[index])
+      }
+    }
+
+    this.writeStorage(HISTORY_KEY, JSON.stringify(nextHistory), function (saved) {
+      if (self.destroyed) {
+        return
+      }
+
+      if (!saved) {
+        self.history = previousHistory
+        self.applyHistory(previousHistory)
+        self.errorText = "删除失败"
+        self.cancelDelete()
+        return
+      }
+
+      self.errorText = ""
+      self.history = nextHistory
+      self.applyHistory(nextHistory)
+      self.cancelDelete()
+    })
+  },
+
   loadHistory() {
     var self = this
 
@@ -116,23 +211,46 @@ export default {
       }
 
       self.history = history
-      self.historyItems = history.map(function (session) {
-        var summary = session && session.summary ? session.summary : {}
-        var kills = typeof summary.kills === "number" ? summary.kills : 0
-        var deaths = typeof summary.deaths === "number" ? summary.deaths : 0
-
-        return {
-          sessionId: session && session.sessionId ? session.sessionId : "",
-          dateText: self.formatDate(session && session.startTime),
-          statusText: session && session.status === "synced" ? "已同步" : "未同步",
-          kills: kills,
-          deaths: deaths,
-          ratioText: deaths === 0 ? kills.toFixed(2) : (kills / deaths).toFixed(2)
-        }
-      })
-      self.displayItems = self.historyItems.slice(0, 4)
-      self.limitText = self.historyItems.length > 4 ? "仅显示最近 4 条" : ""
+      self.applyHistory(history)
     })
+  },
+
+  applyHistory(history) {
+    var self = this
+
+    this.historyItems = history.map(function (session) {
+      var summary = session && session.summary ? session.summary : {}
+      var kills = typeof summary.kills === "number" ? summary.kills : 0
+      var deaths = typeof summary.deaths === "number" ? summary.deaths : 0
+
+      return {
+        sessionId: session && session.sessionId ? session.sessionId : "",
+        dateText: self.formatDate(session && session.startTime),
+        statusText: session && session.status === "synced" ? "（已同步）" : "（未同步）",
+        kills: kills,
+        deaths: deaths,
+        ratioText: deaths === 0 ? kills.toFixed(2) : (kills / deaths).toFixed(2),
+        itemClass:
+          session && session.sessionId === self.deleteReadySessionId
+            ? "history-item history-item-open"
+            : "history-item",
+        itemContentClass:
+          session && session.sessionId === self.deleteReadySessionId
+            ? "item-content item-content-open"
+            : "item-content",
+        deleteActionClass:
+          session && session.sessionId === self.deleteReadySessionId
+            ? "delete-action delete-action-visible"
+            : "delete-action",
+        deleteVisible: session && session.sessionId === self.deleteReadySessionId
+      }
+    })
+    this.displayItems = this.historyItems
+  },
+
+  setDeleteReadySession(sessionId) {
+    this.deleteReadySessionId = sessionId
+    this.applyHistory(this.history)
   },
 
   refreshClock() {
@@ -147,6 +265,53 @@ export default {
 
   pad(value) {
     return value < 10 ? "0" + value : String(value)
+  },
+
+  handleTouchStart(event) {
+    var point = navigation.getTouchPoint(event)
+
+    this.touchStartX = point.x
+    this.touchStartY = point.y
+  },
+
+  handleTouchEnd(event) {
+    var point = navigation.getTouchPoint(event)
+
+    if (this.deleteReadySessionId && navigation.isBackSwipe(this.touchStartX, point.x, this.touchStartY, point.y)) {
+      this.setDeleteReadySession("")
+      this.ignoreNextBackSwipe = false
+      return
+    }
+
+    if (this.ignoreNextBackSwipe) {
+      this.ignoreNextBackSwipe = false
+      return
+    }
+
+    if (navigation.isBackSwipe(this.touchStartX, point.x, this.touchStartY, point.y)) {
+      router.back()
+    }
+  },
+
+  handleItemTouchStart(sessionId, event) {
+    var point = navigation.getTouchPoint(event)
+
+    this.itemTouchStartX = point.x
+    this.itemTouchStartY = point.y
+  },
+
+  handleItemTouchEnd(sessionId, event) {
+    var point = navigation.getTouchPoint(event)
+
+    if (this.deleteReadySessionId === sessionId && navigation.isBackSwipe(this.itemTouchStartX, point.x, this.itemTouchStartY, point.y)) {
+      this.ignoreNextBackSwipe = true
+      this.setDeleteReadySession("")
+      return
+    }
+
+    if (navigation.isDeleteSwipe(this.itemTouchStartX, point.x, this.itemTouchStartY, point.y)) {
+      this.setDeleteReadySession(sessionId)
+    }
   },
 
   readStorage(key, done) {
@@ -208,17 +373,35 @@ export default {
 
 <style>
 .history-page {
-  width: 500px;
-  height: 500px;
+  width: 100%;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   background-color: #000000;
+  animation-name: pageSlideIn;
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+  page-animation-name: pageSlideIn;
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0px);
+  }
 }
 
 .top-row {
-  width: 440px;
+  width: 100%;
   height: 54px;
   margin-top: 22px;
+  padding-left: 30px;
+  padding-right: 30px;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
@@ -242,7 +425,7 @@ export default {
 }
 
 .empty-box {
-  width: 440px;
+  width: 100%;
   height: 360px;
   flex-direction: column;
   justify-content: center;
@@ -256,13 +439,15 @@ export default {
 }
 
 .history-list {
-  width: 440px;
+  width: 100%;
   height: 404px;
+  padding-left: 10px;
+  padding-right: 10px;
   flex-direction: column;
 }
 
 .history-item {
-  width: 440px;
+  width: 100%;
   height: 80px;
   margin-top: 8px;
   padding-left: 18px;
@@ -274,7 +459,7 @@ export default {
 }
 
 .item-main {
-  width: 404px;
+  width: 100%;
   height: 30px;
   flex-direction: row;
   justify-content: space-between;
@@ -306,10 +491,232 @@ export default {
 }
 
 .error-text {
-  width: 440px;
+  width: 100%;
   height: 22px;
   font-size: 16px;
   color: #ff6b6b;
   text-align: center;
+}
+
+.history-page {
+  width: 100%;
+  flex: 1;
+}
+
+.top-row {
+  width: 100%;
+  height: 60px;
+  margin-top: 0px;
+  padding-left: 70px;
+  padding-right: 70px;
+}
+
+.page-title {
+  font-size: 24px;
+}
+
+.clock-text {
+  width: 68px;
+  height: 30px;
+  border-radius: 0px;
+  background-color: transparent;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 30px;
+}
+
+.history-list {
+  width: 100%;
+  height: 440px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.history-item {
+  position: relative;
+  width: 100%;
+  height: 100px;
+  margin-top: 10px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 30px;
+  align-items: center;
+  background-color: #555555;
+  overflow: hidden;
+}
+
+.history-item-open {
+  background-color: #555555;
+}
+
+.item-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #555555;
+  transition-property: transform;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+.item-content-open {
+  transform: translateX(-92px);
+}
+
+.item-main {
+  width: 100%;
+  height: 44px;
+}
+
+.item-date {
+  font-size: 36px;
+  line-height: 44px;
+}
+
+.item-status {
+  width: 110px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: right;
+}
+
+.item-summary {
+  margin-top: 0px;
+  font-size: 24px;
+  color: #999999;
+}
+
+.delete-action {
+  position: absolute;
+  z-index: 1;
+  right: 0px;
+  top: 0px;
+  width: 102px;
+  height: 100px;
+  border-radius: 0px;
+  justify-content: center;
+  align-items: center;
+  background-color: #ff1744;
+  opacity: 0;
+  transform: translateX(24px);
+  transition-property: opacity, transform;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+.delete-action-visible {
+  z-index: 4;
+  opacity: 1;
+  transform: translateX(0px);
+}
+
+.delete-action-icon {
+  width: 44px;
+  height: 44px;
+}
+
+.confirm-overlay {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.68);
+}
+
+.confirm-dialog {
+  width: 360px;
+  height: 210px;
+  padding-left: 20px;
+  padding-right: 20px;
+  border-radius: 28px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #f5f5f5;
+}
+
+.confirm-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111111;
+  text-align: center;
+}
+
+.confirm-message {
+  width: 300px;
+  margin-top: 12px;
+  font-size: 20px;
+  color: #333333;
+  text-align: center;
+}
+
+.confirm-actions {
+  width: 300px;
+  height: 46px;
+  margin-top: 24px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.confirm-button {
+  width: 136px;
+  height: 46px;
+  border-radius: 23px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.cancel-button {
+  background-color: #dbdbdb;
+  color: #111111;
+}
+
+.ok-button {
+  background-color: #ff1744;
+  color: #ffffff;
+}
+
+@media screen and (shape: circle) {
+  .top-row {
+    padding-left: 70px;
+    padding-right: 70px;
+  }
+
+  .history-list {
+    width: 100%;
+    padding-left: 48px;
+    padding-right: 48px;
+    padding-top: 28px;
+    padding-bottom: 80px;
+  }
+
+  .history-item {
+    width: 100%;
+  }
+
+  .item-main {
+    width: 100%;
+  }
+
+  .item-date {
+    font-size: 26px;
+  }
+
+  .item-summary {
+    font-size: 18px;
+  }
+
+  .item-status {
+    width: 92px;
+    font-size: 16px;
+  }
 }
 </style>

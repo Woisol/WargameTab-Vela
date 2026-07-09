@@ -37,6 +37,9 @@
       },
       "pages/settings": {
         "component": "settings"
+      },
+      "pages/settings-option": {
+        "component": "settings-option"
       }
     }
   }

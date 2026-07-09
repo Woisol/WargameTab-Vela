@@ -1,6 +1,10 @@
 const assert = require("assert")
+const fs = require("fs")
+const path = require("path")
 
 const session = require("../src/common/session.js")
+const navigation = require("../src/common/navigation.js")
+const design = require("../src/common/design.js")
 
 function runTest(name, fn) {
   try {
@@ -162,6 +166,116 @@ runTest("formatDuration and getKdRatio return display values", () => {
   assert.equal(session.getKdRatio({ kills: 3, deaths: 0 }), "3.00")
 })
 
+runTest("createReviewTimelineItems maps events to horizontal review markers", () => {
+  const result = session.createReviewTimelineItems(
+    [
+      { type: "kill", time: 0 },
+      { type: "kill", time: 30 },
+      { type: "death", time: 90 },
+      { type: "kill", time: 200 }
+    ],
+    120
+  )
+
+  assert.deepEqual(result, [
+    {
+      markerClass: "timeline-marker kill-marker",
+      eventDotClass: "event-dot kill-marker",
+      offsetPercent: 0,
+      markerStyle: "left: 0px;",
+      timeText: "0:00",
+      typeText: "K"
+    },
+    {
+      markerClass: "timeline-marker kill-marker",
+      eventDotClass: "event-dot kill-marker",
+      offsetPercent: 25,
+      markerStyle: "left: 119px;",
+      timeText: "0:30",
+      typeText: "K"
+    },
+    {
+      markerClass: "timeline-marker death-marker",
+      eventDotClass: "event-dot death-marker",
+      offsetPercent: 75,
+      markerStyle: "left: 356px;",
+      timeText: "1:30",
+      typeText: "D"
+    },
+    {
+      markerClass: "timeline-marker kill-marker",
+      eventDotClass: "event-dot kill-marker",
+      offsetPercent: 100,
+      markerStyle: "left: 475px;",
+      timeText: "2:00",
+      typeText: "K"
+    }
+  ])
+})
+
+runTest("createReviewTimelineAxis renders labels from actual duration", () => {
+  assert.deepEqual(session.createReviewTimelineAxis(130), [
+    { label: "0:00", style: "left: 0px;" },
+    { label: "1:00", style: "left: 179px;" },
+    { label: "2:00", style: "left: 394px;" }
+  ])
+
+  assert.deepEqual(session.createReviewTimelineAxis(1210), [
+    { label: "0:00", style: "left: 0px;" },
+    { label: "5:00", style: "left: 76px;" },
+    { label: "10:00", style: "left: 195px;" },
+    { label: "15:00", style: "left: 314px;" },
+    { label: "20:00", style: "left: 394px;" }
+  ])
+})
+
+runTest("isBackSwipe accepts right swipe and rejects vertical or left gestures", () => {
+  assert.equal(navigation.isBackSwipe(20, 200, 80, 96), true)
+  assert.equal(navigation.isBackSwipe(200, 20, 80, 96), false)
+  assert.equal(navigation.isBackSwipe(20, 200, 40, 180), false)
+  assert.equal(navigation.isBackSwipe(20, 60, 80, 82), false)
+})
+
+runTest("isDeleteSwipe only accepts left swipe distinct from back gesture", () => {
+  assert.equal(navigation.isDeleteSwipe(220, 90, 80, 92), true)
+  assert.equal(navigation.isDeleteSwipe(90, 220, 80, 92), false)
+  assert.equal(navigation.isDeleteSwipe(220, 90, 80, 180), false)
+})
+
+runTest("design exposes shared page padding styles", () => {
+  assert.equal(design.PAGE_PADDING.square, 10)
+  assert.equal(design.PAGE_PADDING.circle, 48)
+  assert.equal(design.pagePaddingStyle("square"), "padding-left: 10px; padding-right: 10px;")
+  assert.equal(design.pagePaddingStyle("circle"), "padding-left: 48px; padding-right: 48px;")
+})
+
+runTest("review uses the provided ratio triangle image asset", () => {
+  const reviewUx = fs.readFileSync(path.join(__dirname, "../src/pages/review/review.ux"), "utf8")
+
+  assert.ok(fs.existsSync(path.join(__dirname, "../src/common/ratio-triangle.png")))
+  assert.ok(reviewUx.indexOf('<image class="ratio-triangle" src="/common/ratio-triangle.png"></image>') >= 0)
+})
+
+runTest("review timeline renders axis line and scrollable full event list", () => {
+  const reviewUx = fs.readFileSync(path.join(__dirname, "../src/pages/review/review.ux"), "utf8")
+
+  assert.ok(reviewUx.indexOf('<scroll class="review-body" scroll-y="true" if="{{ hasSession }}">') >= 0)
+  assert.ok(reviewUx.indexOf('<div class="review-content-item">') >= 0)
+  assert.ok(reviewUx.indexOf('<div class="axis-line"></div>') >= 0)
+  assert.ok(reviewUx.indexOf('<div class="timeline-list">') >= 0)
+  assert.ok(reviewUx.indexOf('<div class="event-item" for="{{ timelineListItems }}">') >= 0)
+  assert.equal(/\.timeline-card\s*\{[^}]*height:/m.test(reviewUx), false)
+  assert.equal(/\.timeline-list\s*\{[^}]*height:/m.test(reviewUx), false)
+  assert.equal(reviewUx.indexOf("timelineItems.slice"), -1)
+})
+
+runTest("history only renders delete action when the row is revealed", () => {
+  const historyUx = fs.readFileSync(path.join(__dirname, "../src/pages/history/history.ux"), "utf8")
+
+  assert.ok(historyUx.indexOf('if="{{ $item.deleteVisible }}"') >= 0)
+  assert.ok(historyUx.indexOf("deleteVisible:") >= 0)
+})
+
 runTest("defaultSettings provides battle interaction defaults", () => {
   assert.deepEqual(session.defaultSettings(), {
     triggerMode: "longPress",
@@ -169,5 +283,65 @@ runTest("defaultSettings provides battle interaction defaults", () => {
     deathVibration: "long",
     aodEnabled: false,
     visualMode: "simple"
+  })
+})
+
+runTest("normalizeSettings keeps valid choices and replaces invalid ones with defaults", () => {
+  assert.deepEqual(
+    session.normalizeSettings({
+      triggerMode: "click",
+      killVibration: "double",
+      deathVibration: "off",
+      aodEnabled: true,
+      visualMode: "detailed"
+    }),
+    {
+      triggerMode: "click",
+      killVibration: "double",
+      deathVibration: "off",
+      aodEnabled: true,
+      visualMode: "detailed"
+    }
+  )
+
+  assert.deepEqual(
+    session.normalizeSettings({
+      triggerMode: "swipe",
+      killVibration: "buzz",
+      deathVibration: "",
+      aodEnabled: "yes",
+      visualMode: "cinema"
+    }),
+    session.defaultSettings()
+  )
+})
+
+runTest("createDisplaySummary returns idle display values without creating a session", () => {
+  assert.deepEqual(session.createDisplaySummary(null, 1752057600000), {
+    kills: 0,
+    deaths: 0,
+    ratioText: "0.00",
+    durationText: "00:00",
+    aodSummaryText: "K 0 / D 0",
+    running: false
+  })
+})
+
+runTest("createDisplaySummary returns live values for an ongoing session", () => {
+  const started = session.createSession(1752057600000)
+  const withEvents = session.addEvent(
+    session.addEvent(started, "kill", 1752057661000, "manual"),
+    "death",
+    1752057722000,
+    "manual"
+  )
+
+  assert.deepEqual(session.createDisplaySummary(withEvents, 1752057783000), {
+    kills: 1,
+    deaths: 1,
+    ratioText: "1.00",
+    durationText: "03:03",
+    aodSummaryText: "K 1 / D 1",
+    running: true
   })
 })

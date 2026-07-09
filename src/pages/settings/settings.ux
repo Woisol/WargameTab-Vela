@@ -1,70 +1,71 @@
 <template>
-  <div class="settings-page">
+  <div class="settings-page" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
     <div class="top-row">
       <text class="page-title">设置</text>
       <text class="status-text">{{ statusText }}</text>
     </div>
 
-    <div class="settings-list">
-      <div class="settings-item">
+    <div class="settings-list" style="{{ pagePaddingStyle }}">
+      <div class="settings-item" onclick="openMenu('trigger')">
         <div class="item-copy">
           <text class="item-title">触发方式</text>
           <text class="item-desc">记录 K / D 的手势</text>
         </div>
-        <input class="value-button" type="button" value="{{ triggerModeLabel }}" onclick="cycleTriggerMode" />
+        <text class="value-text">{{ triggerModeLabel }}</text>
       </div>
 
-      <div class="settings-item">
+      <div class="settings-item" onclick="openMenu('killVibration')">
         <div class="item-copy">
           <text class="item-title">K 震动</text>
           <text class="item-desc">击杀记录反馈</text>
         </div>
-        <input class="value-button" type="button" value="{{ killVibrationLabel }}" onclick="cycleKillVibration" />
+        <text class="value-text">{{ killVibrationLabel }}</text>
       </div>
 
-      <div class="settings-item">
+      <div class="settings-item" onclick="openMenu('deathVibration')">
         <div class="item-copy">
           <text class="item-title">D 震动</text>
           <text class="item-desc">阵亡记录反馈</text>
         </div>
-        <input class="value-button" type="button" value="{{ deathVibrationLabel }}" onclick="cycleDeathVibration" />
+        <text class="value-text">{{ deathVibrationLabel }}</text>
       </div>
 
-      <div class="settings-item">
+      <div class="settings-item" onclick="toggleAod">
         <div class="item-copy">
           <text class="item-title">AOD</text>
           <text class="item-desc">闲置后显示低亮战绩</text>
         </div>
-        <input class="value-button" type="button" value="{{ aodEnabledLabel }}" onclick="cycleAodEnabled" />
-      </div>
-
-      <div class="settings-item">
-        <div class="item-copy">
-          <text class="item-title">显示模式</text>
-          <text class="item-desc">预留详细战斗界面</text>
+        <div class="{{ aodSwitchClass }}">
+          <div class="{{ aodThumbClass }}"></div>
         </div>
-        <input class="value-button" type="button" value="{{ visualModeLabel }}" onclick="cycleVisualMode" />
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import router from "@system.router"
 import storage from "@system.storage"
 
 var sessionHelper = require("../../common/session.js")
+var navigation = require("../../common/navigation.js")
+var design = require("../../common/design.js")
 
 var SETTINGS_KEY = "wargame_settings"
+var SETTINGS_MENU_KEY = "wargame_settings_menu"
 
 export default {
   private: {
     settings: sessionHelper.defaultSettings(),
     triggerModeLabel: "长按",
-    killVibrationLabel: "短",
-    deathVibrationLabel: "长",
-    aodEnabledLabel: "关闭",
-    visualModeLabel: "简洁",
+    killVibrationLabel: "短震",
+    deathVibrationLabel: "长震",
+    aodSwitchClass: "switch-control",
+    aodThumbClass: "switch-thumb",
+    pagePaddingStyle: design.pagePaddingStyle("square"),
     statusText: "已保存",
+    touchStartX: 0,
+    touchStartY: 0,
     destroyed: false
   },
 
@@ -73,57 +74,56 @@ export default {
     this.loadSettings()
   },
 
+  onShow() {
+    if (this.destroyed) {
+      return
+    }
+
+    this.loadSettings()
+  },
+
   onDestroy() {
     this.destroyed = true
   },
 
-  cycleTriggerMode() {
-    var options = ["longPress", "click"]
-    this.settings.triggerMode = options[(options.indexOf(this.settings.triggerMode) + 1) % options.length]
-    this.applySettings()
-    this.saveSettings()
-  },
-
-  cycleKillVibration() {
-    var options = ["short", "double", "long", "off"]
-    this.settings.killVibration = options[(options.indexOf(this.settings.killVibration) + 1) % options.length]
-    this.applySettings()
-    this.saveSettings()
-  },
-
-  cycleDeathVibration() {
-    var options = ["short", "double", "long", "off"]
-    this.settings.deathVibration = options[(options.indexOf(this.settings.deathVibration) + 1) % options.length]
-    this.applySettings()
-    this.saveSettings()
-  },
-
-  cycleAodEnabled() {
+  toggleAod() {
     this.settings.aodEnabled = !this.settings.aodEnabled
     this.applySettings()
     this.saveSettings()
   },
 
-  cycleVisualMode() {
-    var options = ["simple", "detailed"]
-    this.settings.visualMode = options[(options.indexOf(this.settings.visualMode) + 1) % options.length]
-    this.applySettings()
-    this.saveSettings()
+  openMenu(type) {
+    var self = this
+
+    this.writeStorage(SETTINGS_MENU_KEY, type, function (saved) {
+      if (self.destroyed) {
+        return
+      }
+
+      if (!saved) {
+        self.statusText = "打开失败"
+        return
+      }
+
+      router.push({
+        uri: "/pages/settings-option"
+      })
+    })
   },
 
   applySettings() {
     var vibrationLabels = {
-      short: "短",
-      double: "双击",
-      long: "长",
+      short: "短震",
+      double: "快速两次",
+      long: "长震",
       off: "关闭"
     }
 
     this.triggerModeLabel = this.settings.triggerMode === "click" ? "点击" : "长按"
     this.killVibrationLabel = vibrationLabels[this.settings.killVibration] || vibrationLabels.short
     this.deathVibrationLabel = vibrationLabels[this.settings.deathVibration] || vibrationLabels.long
-    this.aodEnabledLabel = this.settings.aodEnabled ? "开启" : "关闭"
-    this.visualModeLabel = this.settings.visualMode === "detailed" ? "详细" : "简洁"
+    this.aodSwitchClass = this.settings.aodEnabled ? "switch-control switch-on" : "switch-control"
+    this.aodThumbClass = this.settings.aodEnabled ? "switch-thumb switch-thumb-on" : "switch-thumb"
   },
 
   loadSettings() {
@@ -134,9 +134,7 @@ export default {
         return
       }
 
-      var savedSettings = self.parseJson(value)
-
-      self.settings = self.cleanSettings(savedSettings)
+      self.settings = sessionHelper.normalizeSettings(self.parseJson(value))
 
       self.applySettings()
     })
@@ -209,47 +207,50 @@ export default {
     }
   },
 
-  cleanSettings(value) {
-    var defaults = sessionHelper.defaultSettings()
-    var saved = value || {}
-    var settings = Object.assign({}, defaults, saved)
+  handleTouchStart(event) {
+    var point = navigation.getTouchPoint(event)
 
-    if (["longPress", "click"].indexOf(settings.triggerMode) < 0) {
-      settings.triggerMode = defaults.triggerMode
+    this.touchStartX = point.x
+    this.touchStartY = point.y
+  },
+
+  handleTouchEnd(event) {
+    var point = navigation.getTouchPoint(event)
+
+    if (navigation.isBackSwipe(this.touchStartX, point.x, this.touchStartY, point.y)) {
+      router.back()
     }
-
-    if (["short", "double", "long", "off"].indexOf(settings.killVibration) < 0) {
-      settings.killVibration = defaults.killVibration
-    }
-
-    if (["short", "double", "long", "off"].indexOf(settings.deathVibration) < 0) {
-      settings.deathVibration = defaults.deathVibration
-    }
-
-    if (typeof settings.aodEnabled !== "boolean") {
-      settings.aodEnabled = defaults.aodEnabled
-    }
-
-    if (["simple", "detailed"].indexOf(settings.visualMode) < 0) {
-      settings.visualMode = defaults.visualMode
-    }
-
-    return settings
   }
 }
 </script>
 
 <style>
 .settings-page {
-  width: 500px;
-  height: 500px;
+  width: 100%;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   background-color: #000000;
+  animation-name: pageSlideIn;
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+  page-animation-name: pageSlideIn;
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0px);
+  }
 }
 
 .top-row {
-  width: 440px;
+  width: 100%;
   height: 54px;
   margin-top: 22px;
   flex-direction: row;
@@ -275,14 +276,14 @@ export default {
 }
 
 .settings-list {
-  width: 440px;
+  width: 100%;
   height: 410px;
   margin-top: 6px;
   flex-direction: column;
 }
 
 .settings-item {
-  width: 440px;
+  width: 100%;
   height: 74px;
   margin-top: 8px;
   padding-left: 16px;
@@ -319,5 +320,97 @@ export default {
   color: #111111;
   font-size: 18px;
   font-weight: 700;
+}
+
+.settings-page {
+  width: 100%;
+  flex: 1;
+}
+
+.top-row {
+  width: 100%;
+  height: 60px;
+  margin-top: 0px;
+  padding-left: 70px;
+  padding-right: 70px;
+}
+
+.settings-list {
+  width: 100%;
+  height: 420px;
+}
+
+.settings-item {
+  height: 84px;
+  border-radius: 18px;
+  background-color: #555555;
+}
+
+.value-text {
+  width: 132px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: right;
+}
+
+.switch-control {
+  position: relative;
+  width: 76px;
+  height: 42px;
+  border-radius: 21px;
+  background-color: #999999;
+}
+
+.switch-on {
+  background-color: #67df79;
+}
+
+.switch-thumb {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 34px;
+  height: 34px;
+  border-radius: 17px;
+  background-color: #ffffff;
+}
+
+.switch-thumb-on {
+  left: 38px;
+  background-color: #ffffff;
+}
+
+@media screen and (shape: circle) {
+  .top-row {
+  }
+
+  .settings-list {
+    padding-top: 22px;
+    padding-bottom: 80px;
+  }
+
+  .settings-item {
+    padding-left: 12px;
+    padding-right: 10px;
+  }
+
+  .item-copy {
+    width: 190px;
+  }
+
+  .item-title {
+    font-size: 20px;
+  }
+
+  .item-desc {
+    font-size: 13px;
+  }
+
+  .value-text {
+    width: 92px;
+    font-size: 16px;
+  }
+
 }
 </style>
