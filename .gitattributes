@@ -1,0 +1,46 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Shell scripts should always use LF
+*.sh text eol=lf
+
+# Batch scripts should always use CRLF (Windows)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Dockerfiles should use LF
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+
+# These files are binary and should be left untouched
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.avi binary
+*.mp3 binary
+*.wav binary
+*.m4a binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.tar.gz binary
+*.zip binary
+*.7z binary
+
+*.draw binary
+
+# UGC Files
+*.gia binary
+*.gil binary
+
+# PS
+
+*.psd binary

@@ -1,48 +1,802 @@
 <template>
-  <div class="demo-page">
-    <text class="title">{{ $t("a.b") }},欢迎打开{{ title }}</text>
-    <!-- 点击跳转详情页 -->
-    <input class="btn" type="button" value="跳转到详情页" onclick="routeDetail" />
+  <div class="battle-page" onclick="handlePageInteraction">
+    <div class="zone kill-zone" onclick="tapKill" onlongpress="pressKill">
+      <text class="side-count">{{ killCount }}</text>
+      <text class="side-label">K</text>
+    </div>
+
+    <div class="center-zone">
+      <div class="top-row">
+        <text class="time-pill">{{ clockText }}</text>
+        <div class="record-pill" onclick="toggleRecording">
+          <div class="{{ recordingClass }}"></div>
+          <text class="record-text">{{ recordText }}</text>
+        </div>
+      </div>
+
+      <text class="date-text">{{ dateText }}</text>
+      <text class="duration-text">{{ durationText }}</text>
+
+      <div class="ratio-block">
+        <text class="ratio-label">K / D</text>
+        <text class="ratio-value">{{ ratioText }}</text>
+      </div>
+
+      <input class="settings-button" type="button" value="设置" onclick="openSettings" />
+      <input class="undo-button" type="button" value="Undo" onclick="openUndoPanel" />
+      <input class="finish-button" type="button" value="结束 / 历史" onclick="finishAndHistory" />
+
+      <div class="page-dots">
+        <div class="dot active-dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+
+    <div class="zone death-zone" onclick="tapDeath" onlongpress="pressDeath">
+      <text class="side-count">{{ deathCount }}</text>
+      <text class="side-label">D</text>
+    </div>
+
+    <div class="undo-overlay" if="{{ showUndoPanel }}">
+      <input class="overlay-action overlay-kill" type="button" value="K" onclick="decrementKill" />
+      <input class="overlay-action overlay-undo" type="button" value="Undo" onclick="undoEvent" />
+      <input
+        class="overlay-action overlay-death"
+        type="button"
+        value="D"
+        onclick="decrementDeath"
+      />
+    </div>
+
+    <div class="aod-page" if="{{ aodActive }}" onclick="wakeFromAod">
+      <text class="aod-date">{{ dateText }}</text>
+      <text class="aod-time">{{ clockText }}</text>
+      <text class="aod-label">K / D</text>
+      <text class="aod-ratio">{{ ratioText }}</text>
+      <text class="aod-summary">{{ aodSummaryText }}</text>
+    </div>
   </div>
 </template>
 
 <script>
 import router from "@system.router"
+import storage from "@system.storage"
+import vibrator from "@system.vibrator"
+
+var sessionHelper = require("../../common/session.js")
+
+var CURRENT_KEY = "wargame_current_session"
+var HISTORY_KEY = "wargame_history"
 
 export default {
-  // 页面级组件的数据模型，影响传入数据的覆盖机制：private内定义的属性不允许被覆盖
+  // 当前页自维护战斗中状态，历史与复盘页从本地记录读取。
   private: {
-    title: "示例页面"
+    currentSession: null,
+    settings: sessionHelper.defaultSettings(),
+    killCount: 0,
+    deathCount: 0,
+    ratioText: "0.00",
+    durationText: "00:00",
+    clockText: "00:00",
+    dateText: "",
+    recordText: "REC",
+    recordingClass: "record-dot",
+    showUndoPanel: false,
+    aodActive: false,
+    aodSummaryText: "K 0 / D 0",
+    timerId: 0,
+    idleTimerId: 0,
+    isRecording: false,
+    initialized: false,
+    destroyed: false
   },
 
-  routeDetail() {
-    // 跳转到应用内的某个页面，router用法详见：文档->接口->页面路由
-    router.push({
-      uri: "/pages/detail"
+  onInit() {
+    this.destroyed = false
+    this.currentSession = sessionHelper.createSession(Date.now())
+    this.refreshTime()
+    this.loadSettings()
+    this.loadCurrent()
+    this.timerId = setInterval(this.refreshTime.bind(this), 1000)
+  },
+
+  onShow() {
+    if (this.destroyed) {
+      return
+    }
+
+    this.loadSettings()
+    this.resetIdleTimer()
+  },
+
+  onDestroy() {
+    this.destroyed = true
+    if (this.timerId) {
+      clearInterval(this.timerId)
+      this.timerId = 0
+    }
+    this.clearIdleTimer()
+    this.saveCurrent()
+  },
+
+  tapKill() {
+    if (!this.initialized || this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    if (this.settings.triggerMode === "click") {
+      this.addBattleEvent("kill")
+    }
+  },
+
+  pressKill() {
+    if (!this.initialized || this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    if (this.settings.triggerMode !== "click") {
+      this.addBattleEvent("kill")
+    }
+  },
+
+  tapDeath() {
+    if (!this.initialized || this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    if (this.settings.triggerMode === "click") {
+      this.addBattleEvent("death")
+    }
+  },
+
+  pressDeath() {
+    if (!this.initialized || this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    if (this.settings.triggerMode !== "click") {
+      this.addBattleEvent("death")
+    }
+  },
+
+  addBattleEvent(type) {
+    this.currentSession = sessionHelper.addEvent(
+      this.currentSession,
+      type,
+      Date.now(),
+      this.settings.triggerMode
+    )
+    this.applySession()
+    this.vibrate(type)
+    this.saveCurrent()
+  },
+
+  openUndoPanel() {
+    if (!this.initialized || this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    this.showUndoPanel = true
+  },
+
+  decrementKill() {
+    if (this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    this.currentSession = sessionHelper.decrement(this.currentSession, "kill")
+    this.closeUndoPanel()
+  },
+
+  decrementDeath() {
+    if (this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    this.currentSession = sessionHelper.decrement(this.currentSession, "death")
+    this.closeUndoPanel()
+  },
+
+  undoEvent() {
+    if (this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    this.currentSession = sessionHelper.undoLast(this.currentSession)
+    this.closeUndoPanel()
+  },
+
+  closeUndoPanel() {
+    this.showUndoPanel = false
+    this.applySession()
+    this.saveCurrent()
+  },
+
+  toggleRecording() {
+    if (this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    this.isRecording = !this.isRecording
+    this.recordText = this.isRecording ? "ON" : "REC"
+    this.recordingClass = this.isRecording ? "record-dot recording-dot" : "record-dot"
+  },
+
+  finishAndHistory() {
+    if (!this.initialized || this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    var finishedSession = sessionHelper.finishSession(this.currentSession, Date.now())
+    var self = this
+
+    this.appendHistory(finishedSession, function (historySaved) {
+      if (self.destroyed) {
+        return
+      }
+
+      if (!historySaved) {
+        self.currentSession = finishedSession
+        self.applySession()
+        self.saveCurrent()
+        return
+      }
+
+      self.currentSession = sessionHelper.createSession(Date.now())
+      self.applySession()
+      self.saveCurrent(function (currentSaved) {
+        if (self.destroyed) {
+          return
+        }
+
+        if (currentSaved) {
+          router.push({
+            uri: "/pages/history"
+          })
+        }
+      })
     })
+  },
+
+  openSettings() {
+    if (!this.initialized || this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    router.push({
+      uri: "/pages/settings"
+    })
+  },
+
+  applySession() {
+    var summary = this.currentSession.summary
+
+    this.killCount = summary.kills
+    this.deathCount = summary.deaths
+    this.ratioText = sessionHelper.getKdRatio(summary)
+    this.aodSummaryText = "K " + summary.kills + " / D " + summary.deaths
+    this.durationText = sessionHelper.formatDuration(Date.now() - this.currentSession.startTime)
+  },
+
+  refreshTime() {
+    var now = new Date()
+    var month = now.getMonth() + 1
+    var day = now.getDate()
+
+    this.clockText = this.pad(now.getHours()) + ":" + this.pad(now.getMinutes())
+    this.dateText = month + "月" + day + "日"
+
+    if (this.currentSession) {
+      this.durationText = sessionHelper.formatDuration(Date.now() - this.currentSession.startTime)
+    }
+  },
+
+  pad(value) {
+    return value < 10 ? "0" + value : String(value)
+  },
+
+  loadSettings() {
+    var self = this
+
+    this.readStorage("wargame_settings", function (value) {
+      if (self.destroyed) {
+        return
+      }
+
+      var savedSettings = self.parseJson(value)
+
+      self.settings = self.cleanSettings(savedSettings)
+
+      if (!self.settings.aodEnabled) {
+        self.aodActive = false
+      }
+
+      self.resetIdleTimer()
+    })
+  },
+
+  loadCurrent() {
+    var self = this
+
+    this.readStorage(CURRENT_KEY, function (value) {
+      if (self.destroyed) {
+        return
+      }
+
+      var savedSession = self.parseJson(value)
+
+      if (self.isValidCurrentSession(savedSession)) {
+        self.currentSession = savedSession
+      }
+
+      self.applySession()
+      self.initialized = true
+      self.resetIdleTimer()
+    })
+  },
+
+  saveCurrent(done) {
+    this.writeStorage(CURRENT_KEY, JSON.stringify(this.currentSession), done)
+  },
+
+  appendHistory(session, done) {
+    var self = this
+
+    this.readStorage(HISTORY_KEY, function (value) {
+      var history = self.parseJson(value)
+
+      if (!Array.isArray(history)) {
+        history = []
+      }
+
+      history.unshift(session)
+      self.writeStorage(HISTORY_KEY, JSON.stringify(history), done)
+    })
+  },
+
+  readStorage(key, done) {
+    try {
+      if (!storage || !storage.get) {
+        done("")
+        return
+      }
+
+      storage.get({
+        key: key,
+        success: function (data) {
+          done(data && data.value !== undefined ? data.value : data)
+        },
+        fail: function () {
+          done("")
+        }
+      })
+    } catch (error) {
+      done("")
+    }
+  },
+
+  writeStorage(key, value, done) {
+    try {
+      if (!storage || !storage.set) {
+        if (done) {
+          done(false)
+        }
+        return
+      }
+
+      storage.set({
+        key: key,
+        value: value,
+        success: function () {
+          if (done) {
+            done(true)
+          }
+        },
+        fail: function () {
+          if (done) {
+            done(false)
+          }
+        }
+      })
+    } catch (error) {
+      if (done) {
+        done(false)
+      }
+    }
+  },
+
+  parseJson(value) {
+    try {
+      if (!value || typeof value !== "string") {
+        return null
+      }
+
+      return JSON.parse(value)
+    } catch (error) {
+      return null
+    }
+  },
+
+  isValidCurrentSession(session) {
+    return (
+      session &&
+      typeof session.sessionId === "string" &&
+      session.sessionId.length > 0 &&
+      typeof session.startTime === "number" &&
+      session.startTime > 0 &&
+      session.status === "ongoing" &&
+      session.summary &&
+      typeof session.summary.kills === "number" &&
+      typeof session.summary.deaths === "number" &&
+      Array.isArray(session.events)
+    )
+  },
+
+  handlePageInteraction() {
+    if (!this.aodActive) {
+      this.resetIdleTimer()
+    }
+  },
+
+  wakeFromAod() {
+    if (this.destroyed) {
+      return
+    }
+
+    this.aodActive = false
+    this.resetIdleTimer()
+  },
+
+  resetIdleTimer() {
+    var self = this
+
+    this.clearIdleTimer()
+    if (this.destroyed || !this.initialized || !this.settings.aodEnabled || this.aodActive) {
+      return
+    }
+
+    this.idleTimerId = setTimeout(function () {
+      self.enterAod()
+    }, 15000)
+  },
+
+  enterAod() {
+    if (this.destroyed || !this.settings.aodEnabled) {
+      return
+    }
+
+    this.showUndoPanel = false
+    this.aodActive = true
+  },
+
+  clearIdleTimer() {
+    if (this.idleTimerId) {
+      clearTimeout(this.idleTimerId)
+      this.idleTimerId = 0
+    }
+  },
+
+  cleanSettings(value) {
+    var defaults = sessionHelper.defaultSettings()
+    var saved = value || {}
+    var settings = Object.assign({}, defaults, saved)
+
+    if (["longPress", "click"].indexOf(settings.triggerMode) < 0) {
+      settings.triggerMode = defaults.triggerMode
+    }
+
+    if (["short", "double", "long", "off"].indexOf(settings.killVibration) < 0) {
+      settings.killVibration = defaults.killVibration
+    }
+
+    if (["short", "double", "long", "off"].indexOf(settings.deathVibration) < 0) {
+      settings.deathVibration = defaults.deathVibration
+    }
+
+    if (typeof settings.aodEnabled !== "boolean") {
+      settings.aodEnabled = defaults.aodEnabled
+    }
+
+    if (["simple", "detailed"].indexOf(settings.visualMode) < 0) {
+      settings.visualMode = defaults.visualMode
+    }
+
+    return settings
+  },
+
+  vibrate(type) {
+    try {
+      if (!vibrator || !vibrator.vibrate) {
+        return
+      }
+
+      var mode = type === "kill" ? this.settings.killVibration : this.settings.deathVibration
+      if (mode === "off") {
+        return
+      }
+
+      vibrator.vibrate({
+        mode: mode
+      })
+    } catch (error) {}
   }
 }
 </script>
 
 <style>
-.demo-page {
+.battle-page {
+  width: 100svw;
+  height: 100svh;
+  flex-direction: row;
+}
+
+.zone {
+  width: 180px;
+  height: 100svh;
   flex-direction: column;
   justify-content: center;
   align-items: center;
 }
 
-.title {
-  font-size: 20px;
+.kill-zone {
+  background-color: #ff1744;
+}
+
+.death-zone {
+  background-color: #2979ff;
+}
+
+.side-count {
+  font-size: 86px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 92px;
   text-align: center;
 }
 
-.btn {
-  width: 200px;
-  height: 40px;
-  margin-top: 20px;
-  border-radius: 5px;
-  background-color: #09ba07;
-  font-size: 20px;
+.side-label {
+  margin-top: 10px;
+  font-size: 28px;
   color: #ffffff;
+  text-align: center;
+}
+
+.center-zone {
+  width: 140px;
+  height: 500px;
+  flex-direction: column;
+  align-items: center;
+  background-color: #555555;
+}
+
+.top-row {
+  width: 124px;
+  height: 36px;
+  margin-top: 22px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.time-pill {
+  width: 70px;
+  height: 30px;
+  border-radius: 15px;
+  background-color: #ffffff;
+  color: #111111;
+  font-size: 18px;
+  text-align: center;
+  line-height: 30px;
+}
+
+.record-pill {
+  width: 48px;
+  height: 30px;
+  border-radius: 15px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.record-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: #ffffff;
+}
+
+.recording-dot {
+  background-color: #ff1744;
+}
+
+.record-text {
+  margin-left: 4px;
+  font-size: 10px;
+  color: #ffffff;
+}
+
+.date-text {
+  margin-top: 20px;
+  font-size: 18px;
+  color: #f1f1f1;
+  text-align: center;
+}
+
+.duration-text {
+  margin-top: 10px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+}
+
+.ratio-block {
+  width: 120px;
+  margin-top: 52px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ratio-label {
+  font-size: 18px;
+  color: #d8d8d8;
+  text-align: center;
+}
+
+.ratio-value {
+  margin-top: 8px;
+  font-size: 34px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+}
+
+.undo-button {
+  width: 112px;
+  height: 52px;
+  margin-top: 18px;
+  border-radius: 26px;
+  background-color: #ffffff;
+  color: #111111;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.settings-button {
+  width: 88px;
+  height: 32px;
+  margin-top: 28px;
+  border-radius: 16px;
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.finish-button {
+  width: 112px;
+  height: 34px;
+  margin-top: 14px;
+  border-radius: 17px;
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.page-dots {
+  width: 52px;
+  height: 12px;
+  margin-top: 28px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.active-dot {
+  background-color: #ffffff;
+}
+
+.undo-overlay {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 500px;
+  height: 500px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.72);
+}
+
+.overlay-action {
+  width: 132px;
+  height: 132px;
+  margin-left: 8px;
+  margin-right: 8px;
+  border-radius: 66px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.overlay-kill {
+  background-color: #ff1744;
+}
+
+.overlay-undo {
+  background-color: #333333;
+}
+
+.overlay-death {
+  background-color: #2979ff;
+}
+
+.aod-page {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 500px;
+  height: 500px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #000000;
+}
+
+.aod-date {
+  font-size: 24px;
+  color: #8a8a8a;
+  text-align: center;
+}
+
+.aod-time {
+  margin-top: 8px;
+  font-size: 78px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 86px;
+  text-align: center;
+}
+
+.aod-label {
+  margin-top: 34px;
+  font-size: 20px;
+  color: #6f6f6f;
+  text-align: center;
+}
+
+.aod-ratio {
+  margin-top: 6px;
+  font-size: 72px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 80px;
+  text-align: center;
+}
+
+.aod-summary {
+  margin-top: 12px;
+  font-size: 26px;
+  color: #d8d8d8;
+  text-align: center;
 }
 </style>

@@ -1,0 +1,315 @@
+<template>
+  <div class="history-page">
+    <div class="top-row">
+      <text class="page-title">历史战绩</text>
+      <text class="clock-text">{{ clockText }}</text>
+    </div>
+
+    <text class="error-text" if="{{ errorText }}">{{ errorText }}</text>
+
+    <div class="empty-box" if="{{ displayItems.length === 0 }}">
+      <text class="empty-text">暂无历史记录</text>
+    </div>
+
+    <div class="history-list" if="{{ displayItems.length > 0 }}">
+      <div class="history-item" for="{{ displayItems }}" onclick="openReview($item.sessionId)">
+        <div class="item-main">
+          <text class="item-date">{{ $item.dateText }}</text>
+          <text class="item-status">{{ $item.statusText }}</text>
+        </div>
+        <text class="item-summary">k {{ $item.kills }} | d {{ $item.deaths }} | k/d {{ $item.ratioText }}</text>
+      </div>
+      <text class="limit-text" if="{{ limitText }}">{{ limitText }}</text>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from "@system.router"
+import storage from "@system.storage"
+
+var HISTORY_KEY = "wargame_history"
+var SELECTED_KEY = "wargame_selected_session"
+
+export default {
+  private: {
+    history: [],
+    historyItems: [],
+    displayItems: [],
+    limitText: "",
+    errorText: "",
+    clockText: "00:00",
+    timerId: 0,
+    destroyed: false
+  },
+
+  onInit() {
+    this.destroyed = false
+    this.refreshClock()
+    this.loadHistory()
+    this.timerId = setInterval(this.refreshClock.bind(this), 1000)
+  },
+
+  onShow() {
+    if (this.destroyed) {
+      return
+    }
+
+    this.loadHistory()
+  },
+
+  onDestroy() {
+    this.destroyed = true
+    if (this.timerId) {
+      clearInterval(this.timerId)
+      this.timerId = 0
+    }
+  },
+
+  openReview(sessionId) {
+    var selected = null
+    var self = this
+
+    for (var index = 0; index < this.history.length; index += 1) {
+      if (this.history[index] && this.history[index].sessionId === sessionId) {
+        selected = this.history[index]
+        break
+      }
+    }
+
+    if (!selected) {
+      return
+    }
+
+    this.errorText = ""
+    this.writeStorage(SELECTED_KEY, JSON.stringify(selected), function (saved) {
+      if (self.destroyed) {
+        return
+      }
+
+      if (!saved) {
+        self.errorText = "选择失败"
+        return
+      }
+
+      router.push({
+        uri: "/pages/review",
+        params: {
+          sessionId: sessionId
+        }
+      })
+    })
+  },
+
+  loadHistory() {
+    var self = this
+
+    this.readStorage(HISTORY_KEY, function (value) {
+      if (self.destroyed) {
+        return
+      }
+
+      var history = self.parseJson(value)
+
+      if (!Array.isArray(history)) {
+        history = []
+      }
+
+      self.history = history
+      self.historyItems = history.map(function (session) {
+        var summary = session && session.summary ? session.summary : {}
+        var kills = typeof summary.kills === "number" ? summary.kills : 0
+        var deaths = typeof summary.deaths === "number" ? summary.deaths : 0
+
+        return {
+          sessionId: session && session.sessionId ? session.sessionId : "",
+          dateText: self.formatDate(session && session.startTime),
+          statusText: session && session.status === "synced" ? "已同步" : "未同步",
+          kills: kills,
+          deaths: deaths,
+          ratioText: deaths === 0 ? kills.toFixed(2) : (kills / deaths).toFixed(2)
+        }
+      })
+      self.displayItems = self.historyItems.slice(0, 4)
+      self.limitText = self.historyItems.length > 4 ? "仅显示最近 4 条" : ""
+    })
+  },
+
+  refreshClock() {
+    var now = new Date()
+    this.clockText = this.pad(now.getHours()) + ":" + this.pad(now.getMinutes())
+  },
+
+  formatDate(value) {
+    var date = new Date(typeof value === "number" && value > 0 ? value : Date.now())
+    return date.getFullYear() + "-" + this.pad(date.getMonth() + 1) + "-" + this.pad(date.getDate())
+  },
+
+  pad(value) {
+    return value < 10 ? "0" + value : String(value)
+  },
+
+  readStorage(key, done) {
+    try {
+      if (!storage || !storage.get) {
+        done("")
+        return
+      }
+
+      storage.get({
+        key: key,
+        success: function (data) {
+          done(data && data.value !== undefined ? data.value : data)
+        },
+        fail: function () {
+          done("")
+        }
+      })
+    } catch (error) {
+      done("")
+    }
+  },
+
+  writeStorage(key, value, done) {
+    try {
+      if (!storage || !storage.set) {
+        done(false)
+        return
+      }
+
+      storage.set({
+        key: key,
+        value: value,
+        success: function () {
+          done(true)
+        },
+        fail: function () {
+          done(false)
+        }
+      })
+    } catch (error) {
+      done(false)
+    }
+  },
+
+  parseJson(value) {
+    try {
+      if (!value || typeof value !== "string") {
+        return null
+      }
+
+      return JSON.parse(value)
+    } catch (error) {
+      return null
+    }
+  }
+}
+</script>
+
+<style>
+.history-page {
+  width: 500px;
+  height: 500px;
+  flex-direction: column;
+  align-items: center;
+  background-color: #000000;
+}
+
+.top-row {
+  width: 440px;
+  height: 54px;
+  margin-top: 22px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.clock-text {
+  width: 74px;
+  height: 30px;
+  border-radius: 15px;
+  background-color: #ffffff;
+  color: #111111;
+  font-size: 18px;
+  text-align: center;
+  line-height: 30px;
+}
+
+.empty-box {
+  width: 440px;
+  height: 360px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.empty-text {
+  font-size: 20px;
+  color: #8a8a8a;
+  text-align: center;
+}
+
+.history-list {
+  width: 440px;
+  height: 404px;
+  flex-direction: column;
+}
+
+.history-item {
+  width: 440px;
+  height: 80px;
+  margin-top: 8px;
+  padding-left: 18px;
+  padding-right: 18px;
+  border-radius: 8px;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #171717;
+}
+
+.item-main {
+  width: 404px;
+  height: 30px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-date {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.item-status {
+  font-size: 16px;
+  color: #8a8a8a;
+}
+
+.item-summary {
+  margin-top: 10px;
+  font-size: 18px;
+  color: #d8d8d8;
+}
+
+.limit-text {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #6f6f6f;
+  text-align: center;
+}
+
+.error-text {
+  width: 440px;
+  height: 22px;
+  font-size: 16px;
+  color: #ff6b6b;
+  text-align: center;
+}
+</style>

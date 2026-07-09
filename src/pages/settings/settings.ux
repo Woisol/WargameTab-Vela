@@ -1,0 +1,323 @@
+<template>
+  <div class="settings-page">
+    <div class="top-row">
+      <text class="page-title">设置</text>
+      <text class="status-text">{{ statusText }}</text>
+    </div>
+
+    <div class="settings-list">
+      <div class="settings-item">
+        <div class="item-copy">
+          <text class="item-title">触发方式</text>
+          <text class="item-desc">记录 K / D 的手势</text>
+        </div>
+        <input class="value-button" type="button" value="{{ triggerModeLabel }}" onclick="cycleTriggerMode" />
+      </div>
+
+      <div class="settings-item">
+        <div class="item-copy">
+          <text class="item-title">K 震动</text>
+          <text class="item-desc">击杀记录反馈</text>
+        </div>
+        <input class="value-button" type="button" value="{{ killVibrationLabel }}" onclick="cycleKillVibration" />
+      </div>
+
+      <div class="settings-item">
+        <div class="item-copy">
+          <text class="item-title">D 震动</text>
+          <text class="item-desc">阵亡记录反馈</text>
+        </div>
+        <input class="value-button" type="button" value="{{ deathVibrationLabel }}" onclick="cycleDeathVibration" />
+      </div>
+
+      <div class="settings-item">
+        <div class="item-copy">
+          <text class="item-title">AOD</text>
+          <text class="item-desc">闲置后显示低亮战绩</text>
+        </div>
+        <input class="value-button" type="button" value="{{ aodEnabledLabel }}" onclick="cycleAodEnabled" />
+      </div>
+
+      <div class="settings-item">
+        <div class="item-copy">
+          <text class="item-title">显示模式</text>
+          <text class="item-desc">预留详细战斗界面</text>
+        </div>
+        <input class="value-button" type="button" value="{{ visualModeLabel }}" onclick="cycleVisualMode" />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import storage from "@system.storage"
+
+var sessionHelper = require("../../common/session.js")
+
+var SETTINGS_KEY = "wargame_settings"
+
+export default {
+  private: {
+    settings: sessionHelper.defaultSettings(),
+    triggerModeLabel: "长按",
+    killVibrationLabel: "短",
+    deathVibrationLabel: "长",
+    aodEnabledLabel: "关闭",
+    visualModeLabel: "简洁",
+    statusText: "已保存",
+    destroyed: false
+  },
+
+  onInit() {
+    this.destroyed = false
+    this.loadSettings()
+  },
+
+  onDestroy() {
+    this.destroyed = true
+  },
+
+  cycleTriggerMode() {
+    var options = ["longPress", "click"]
+    this.settings.triggerMode = options[(options.indexOf(this.settings.triggerMode) + 1) % options.length]
+    this.applySettings()
+    this.saveSettings()
+  },
+
+  cycleKillVibration() {
+    var options = ["short", "double", "long", "off"]
+    this.settings.killVibration = options[(options.indexOf(this.settings.killVibration) + 1) % options.length]
+    this.applySettings()
+    this.saveSettings()
+  },
+
+  cycleDeathVibration() {
+    var options = ["short", "double", "long", "off"]
+    this.settings.deathVibration = options[(options.indexOf(this.settings.deathVibration) + 1) % options.length]
+    this.applySettings()
+    this.saveSettings()
+  },
+
+  cycleAodEnabled() {
+    this.settings.aodEnabled = !this.settings.aodEnabled
+    this.applySettings()
+    this.saveSettings()
+  },
+
+  cycleVisualMode() {
+    var options = ["simple", "detailed"]
+    this.settings.visualMode = options[(options.indexOf(this.settings.visualMode) + 1) % options.length]
+    this.applySettings()
+    this.saveSettings()
+  },
+
+  applySettings() {
+    var vibrationLabels = {
+      short: "短",
+      double: "双击",
+      long: "长",
+      off: "关闭"
+    }
+
+    this.triggerModeLabel = this.settings.triggerMode === "click" ? "点击" : "长按"
+    this.killVibrationLabel = vibrationLabels[this.settings.killVibration] || vibrationLabels.short
+    this.deathVibrationLabel = vibrationLabels[this.settings.deathVibration] || vibrationLabels.long
+    this.aodEnabledLabel = this.settings.aodEnabled ? "开启" : "关闭"
+    this.visualModeLabel = this.settings.visualMode === "detailed" ? "详细" : "简洁"
+  },
+
+  loadSettings() {
+    var self = this
+
+    this.readStorage(SETTINGS_KEY, function (value) {
+      if (self.destroyed) {
+        return
+      }
+
+      var savedSettings = self.parseJson(value)
+
+      self.settings = self.cleanSettings(savedSettings)
+
+      self.applySettings()
+    })
+  },
+
+  saveSettings() {
+    var self = this
+
+    this.writeStorage(SETTINGS_KEY, JSON.stringify(this.settings), function (saved) {
+      if (self.destroyed) {
+        return
+      }
+
+      self.statusText = saved ? "已保存" : "保存失败"
+    })
+  },
+
+  readStorage(key, done) {
+    try {
+      if (!storage || !storage.get) {
+        done("")
+        return
+      }
+
+      storage.get({
+        key: key,
+        success: function (data) {
+          done(data && data.value !== undefined ? data.value : data)
+        },
+        fail: function () {
+          done("")
+        }
+      })
+    } catch (error) {
+      done("")
+    }
+  },
+
+  writeStorage(key, value, done) {
+    try {
+      if (!storage || !storage.set) {
+        done(false)
+        return
+      }
+
+      storage.set({
+        key: key,
+        value: value,
+        success: function () {
+          done(true)
+        },
+        fail: function () {
+          done(false)
+        }
+      })
+    } catch (error) {
+      done(false)
+    }
+  },
+
+  parseJson(value) {
+    try {
+      if (!value || typeof value !== "string") {
+        return null
+      }
+
+      return JSON.parse(value)
+    } catch (error) {
+      return null
+    }
+  },
+
+  cleanSettings(value) {
+    var defaults = sessionHelper.defaultSettings()
+    var saved = value || {}
+    var settings = Object.assign({}, defaults, saved)
+
+    if (["longPress", "click"].indexOf(settings.triggerMode) < 0) {
+      settings.triggerMode = defaults.triggerMode
+    }
+
+    if (["short", "double", "long", "off"].indexOf(settings.killVibration) < 0) {
+      settings.killVibration = defaults.killVibration
+    }
+
+    if (["short", "double", "long", "off"].indexOf(settings.deathVibration) < 0) {
+      settings.deathVibration = defaults.deathVibration
+    }
+
+    if (typeof settings.aodEnabled !== "boolean") {
+      settings.aodEnabled = defaults.aodEnabled
+    }
+
+    if (["simple", "detailed"].indexOf(settings.visualMode) < 0) {
+      settings.visualMode = defaults.visualMode
+    }
+
+    return settings
+  }
+}
+</script>
+
+<style>
+.settings-page {
+  width: 500px;
+  height: 500px;
+  flex-direction: column;
+  align-items: center;
+  background-color: #000000;
+}
+
+.top-row {
+  width: 440px;
+  height: 54px;
+  margin-top: 22px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.status-text {
+  width: 92px;
+  height: 30px;
+  border-radius: 15px;
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #d8d8d8;
+  font-size: 16px;
+  text-align: center;
+  line-height: 30px;
+}
+
+.settings-list {
+  width: 440px;
+  height: 410px;
+  margin-top: 6px;
+  flex-direction: column;
+}
+
+.settings-item {
+  width: 440px;
+  height: 74px;
+  margin-top: 8px;
+  padding-left: 16px;
+  padding-right: 12px;
+  border-radius: 8px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #171717;
+}
+
+.item-copy {
+  width: 270px;
+  flex-direction: column;
+}
+
+.item-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.item-desc {
+  margin-top: 6px;
+  font-size: 15px;
+  color: #8a8a8a;
+}
+
+.value-button {
+  width: 112px;
+  height: 42px;
+  border-radius: 21px;
+  background-color: #ffffff;
+  color: #111111;
+  font-size: 18px;
+  font-weight: 700;
+}
+</style>

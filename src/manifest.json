@@ -11,6 +11,12 @@
   "features": [
     {
       "name": "system.router"
+    },
+    {
+      "name": "system.storage"
+    },
+    {
+      "name": "system.vibrator"
     }
   ],
   "config": {
@@ -23,8 +29,14 @@
       "pages/index": {
         "component": "index"
       },
-      "pages/detail": {
-        "component": "detail"
+      "pages/history": {
+        "component": "history"
+      },
+      "pages/review": {
+        "component": "review"
+      },
+      "pages/settings": {
+        "component": "settings"
       }
     }
   }

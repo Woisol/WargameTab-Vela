@@ -1,0 +1,425 @@
+<template>
+  <div class="review-page">
+    <div class="top-row">
+      <text class="page-title">{{ titleText }}</text>
+      <text class="clock-text">{{ clockText }}</text>
+    </div>
+
+    <div class="empty-box" if="{{ !hasSession }}">
+      <text class="empty-text">暂无复盘记录</text>
+    </div>
+
+    <div class="review-body" if="{{ hasSession }}">
+      <text class="ratio-label">K / D</text>
+      <text class="ratio-value">{{ ratioText }}</text>
+      <text class="sync-text">{{ syncText }}</text>
+
+      <div class="score-row">
+        <div class="score-block kill-block">
+          <text class="score-number">{{ killCount }}</text>
+          <text class="score-label">K</text>
+        </div>
+        <div class="score-block death-block">
+          <text class="score-number">{{ deathCount }}</text>
+          <text class="score-label">D</text>
+        </div>
+      </div>
+
+      <text class="time-range">{{ rangeText }}</text>
+      <text class="duration-text">{{ durationText }}</text>
+
+      <div class="timeline-axis">
+        <text class="axis-label">0:00</text>
+        <text class="axis-label">1:00</text>
+        <text class="axis-label">2:00</text>
+      </div>
+
+      <div class="timeline-list">
+        <div class="event-item" for="{{ timelineItems }}">
+          <div class="{{ $item.dotClass }}"></div>
+          <text class="event-time">{{ $item.timeText }}</text>
+          <text class="event-type">{{ $item.typeText }}</text>
+        </div>
+        <text class="limit-text" if="{{ eventLimitText }}">{{ eventLimitText }}</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import storage from "@system.storage"
+
+var HISTORY_KEY = "wargame_history"
+var SELECTED_KEY = "wargame_selected_session"
+
+export default {
+  private: {
+    hasSession: false,
+    titleText: "复盘",
+    clockText: "00:00",
+    ratioText: "0.00",
+    syncText: "未同步",
+    killCount: 0,
+    deathCount: 0,
+    rangeText: "--:--:-- - --:--:--",
+    durationText: "总时长：0 分钟 0 秒",
+    timelineItems: [],
+    eventLimitText: "",
+    timerId: 0,
+    destroyed: false
+  },
+
+  onInit() {
+    this.destroyed = false
+    this.refreshClock()
+    this.loadSession()
+    this.timerId = setInterval(this.refreshClock.bind(this), 1000)
+  },
+
+  onShow() {
+    if (this.destroyed) {
+      return
+    }
+
+    this.loadSession()
+  },
+
+  onDestroy() {
+    this.destroyed = true
+    if (this.timerId) {
+      clearInterval(this.timerId)
+      this.timerId = 0
+    }
+  },
+
+  loadSession() {
+    var self = this
+
+    this.readStorage(SELECTED_KEY, function (selectedValue) {
+      if (self.destroyed) {
+        return
+      }
+
+      var selected = self.parseJson(selectedValue)
+
+      if (self.isValidSession(selected)) {
+        self.applySession(selected)
+        return
+      }
+
+      self.readStorage(HISTORY_KEY, function (historyValue) {
+        if (self.destroyed) {
+          return
+        }
+
+        var history = self.parseJson(historyValue)
+
+        if (Array.isArray(history) && history.length > 0 && self.isValidSession(history[0])) {
+          self.applySession(history[0])
+          return
+        }
+
+        self.hasSession = false
+      })
+    })
+  },
+
+  applySession(session) {
+    var summary = session.summary || {}
+    var kills = typeof summary.kills === "number" ? summary.kills : 0
+    var deaths = typeof summary.deaths === "number" ? summary.deaths : 0
+    var startTime = typeof session.startTime === "number" ? session.startTime : 0
+    var endTime = typeof session.endTime === "number" && session.endTime > 0 ? session.endTime : startTime
+    var totalSeconds = Math.max(0, Math.floor((endTime - startTime) / 1000))
+    var minutes = Math.floor(totalSeconds / 60)
+    var seconds = totalSeconds % 60
+    var self = this
+
+    this.hasSession = true
+    this.titleText = this.formatDate(startTime) + " 复盘"
+    this.ratioText = deaths === 0 ? kills.toFixed(2) : (kills / deaths).toFixed(2)
+    this.syncText = session.status === "synced" ? "已同步" : "未同步"
+    this.killCount = kills
+    this.deathCount = deaths
+    this.rangeText = this.formatClock(startTime) + " - " + this.formatClock(endTime)
+    this.durationText = "总时长：" + minutes + " 分钟 " + seconds + " 秒"
+    var events = Array.isArray(session.events) ? session.events : []
+
+    this.timelineItems = events.slice(0, 3).map(function (event) {
+      var isKill = event && event.type === "kill"
+      var eventSecond = event && typeof event.time === "number" ? event.time : 0
+
+      return {
+        dotClass: isKill ? "event-dot kill-dot" : "event-dot death-dot",
+        timeText: self.formatEventTime(eventSecond),
+        typeText: isKill ? "K" : "D"
+      }
+    })
+    this.eventLimitText = events.length > 3 ? "仅显示前 3 条事件" : ""
+  },
+
+  refreshClock() {
+    var now = new Date()
+    this.clockText = this.pad(now.getHours()) + ":" + this.pad(now.getMinutes())
+  },
+
+  formatDate(value) {
+    var date = new Date(typeof value === "number" && value > 0 ? value : Date.now())
+    return date.getFullYear() + "-" + this.pad(date.getMonth() + 1) + "-" + this.pad(date.getDate())
+  },
+
+  formatClock(value) {
+    var date = new Date(typeof value === "number" && value > 0 ? value : Date.now())
+    return this.pad(date.getHours()) + ":" + this.pad(date.getMinutes()) + ":" + this.pad(date.getSeconds())
+  },
+
+  formatEventTime(value) {
+    var totalSeconds = Math.max(0, Math.floor(value))
+    return Math.floor(totalSeconds / 60) + ":" + this.pad(totalSeconds % 60)
+  },
+
+  pad(value) {
+    return value < 10 ? "0" + value : String(value)
+  },
+
+  readStorage(key, done) {
+    try {
+      if (!storage || !storage.get) {
+        done("")
+        return
+      }
+
+      storage.get({
+        key: key,
+        success: function (data) {
+          done(data && data.value !== undefined ? data.value : data)
+        },
+        fail: function () {
+          done("")
+        }
+      })
+    } catch (error) {
+      done("")
+    }
+  },
+
+  parseJson(value) {
+    try {
+      if (!value || typeof value !== "string") {
+        return null
+      }
+
+      return JSON.parse(value)
+    } catch (error) {
+      return null
+    }
+  },
+
+  isValidSession(session) {
+    return (
+      session &&
+      typeof session.sessionId === "string" &&
+      session.summary &&
+      typeof session.summary.kills === "number" &&
+      typeof session.summary.deaths === "number" &&
+      Array.isArray(session.events)
+    )
+  }
+}
+</script>
+
+<style>
+.review-page {
+  width: 500px;
+  height: 500px;
+  flex-direction: column;
+  align-items: center;
+  background-color: #000000;
+}
+
+.top-row {
+  width: 440px;
+  height: 52px;
+  margin-top: 20px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  width: 320px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.clock-text {
+  width: 74px;
+  height: 30px;
+  border-radius: 15px;
+  background-color: #ffffff;
+  color: #111111;
+  font-size: 18px;
+  text-align: center;
+  line-height: 30px;
+}
+
+.empty-box {
+  width: 440px;
+  height: 390px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.empty-text {
+  font-size: 20px;
+  color: #8a8a8a;
+  text-align: center;
+}
+
+.review-body {
+  width: 440px;
+  height: 410px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ratio-label {
+  margin-top: 6px;
+  font-size: 18px;
+  color: #8a8a8a;
+  text-align: center;
+}
+
+.ratio-value {
+  margin-top: 4px;
+  font-size: 64px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 72px;
+  text-align: center;
+}
+
+.sync-text {
+  margin-top: 2px;
+  font-size: 18px;
+  color: #8a8a8a;
+  text-align: center;
+}
+
+.score-row {
+  width: 260px;
+  height: 72px;
+  margin-top: 12px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.score-block {
+  width: 118px;
+  height: 72px;
+  border-radius: 8px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+.kill-block {
+  background-color: #ff1744;
+}
+
+.death-block {
+  background-color: #2979ff;
+}
+
+.score-number {
+  font-size: 34px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.score-label {
+  margin-left: 8px;
+  font-size: 18px;
+  color: #ffffff;
+}
+
+.time-range {
+  margin-top: 12px;
+  font-size: 18px;
+  color: #ffffff;
+  text-align: center;
+}
+
+.duration-text {
+  margin-top: 6px;
+  font-size: 18px;
+  color: #bdbdbd;
+  text-align: center;
+}
+
+.timeline-axis {
+  width: 330px;
+  height: 28px;
+  margin-top: 14px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom-width: 2px;
+  border-bottom-color: #3a3a3a;
+}
+
+.axis-label {
+  font-size: 14px;
+  color: #8a8a8a;
+}
+
+.timeline-list {
+  width: 330px;
+  height: 94px;
+  margin-top: 8px;
+  flex-direction: column;
+}
+
+.event-item {
+  width: 330px;
+  height: 28px;
+  flex-direction: row;
+  align-items: center;
+}
+
+.event-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+}
+
+.kill-dot {
+  background-color: #ff1744;
+}
+
+.death-dot {
+  background-color: #2979ff;
+}
+
+.event-time {
+  margin-left: 10px;
+  width: 64px;
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.event-type {
+  font-size: 16px;
+  font-weight: 700;
+  color: #d8d8d8;
+}
+
+.limit-text {
+  margin-top: 2px;
+  font-size: 14px;
+  color: #6f6f6f;
+  text-align: center;
+}
+</style>
