@@ -1,42 +1,42 @@
 <template>
-  <div class="settings-page" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
-    <div class="top-row">
-      <text class="page-title">设置</text>
-      <text class="status-text">{{ statusText }}</text>
+  <div class="settings-page" style="{{ pageStyle }}" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
+    <div class="title-bar">
+      <text class="page-title">{{ $t('settings.title') }}</text>
+      <text class="status-text" style="{{ statusStyle }}">{{ $t(statusKey) }}</text>
     </div>
 
     <div class="settings-list" style="{{ pagePaddingStyle }}">
-      <div class="settings-item" onclick="openMenu('trigger')">
+      <div class="settings-item" style="{{ settingsItemStyle }}" onclick="openMenu('trigger')">
         <div class="item-copy">
-          <text class="item-title">触发方式</text>
-          <text class="item-desc">记录 K / D 的手势</text>
+          <text class="item-title">{{ $t('settings.items.trigger.title') }}</text>
+          <text class="item-desc">{{ $t('settings.items.trigger.desc') }}</text>
         </div>
-        <text class="value-text">{{ triggerModeLabel }}</text>
+        <text class="value-text">{{ $t(triggerModeLabelKey) }}</text>
       </div>
 
-      <div class="settings-item" onclick="openMenu('killVibration')">
+      <div class="settings-item" style="{{ settingsItemStyle }}" onclick="openMenu('killVibration')">
         <div class="item-copy">
-          <text class="item-title">K 震动</text>
-          <text class="item-desc">击杀记录反馈</text>
+          <text class="item-title">{{ $t('settings.items.killVibration.title') }}</text>
+          <text class="item-desc">{{ $t('settings.items.killVibration.desc') }}</text>
         </div>
-        <text class="value-text">{{ killVibrationLabel }}</text>
+        <text class="value-text">{{ $t(killVibrationLabelKey) }}</text>
       </div>
 
-      <div class="settings-item" onclick="openMenu('deathVibration')">
+      <div class="settings-item" style="{{ settingsItemStyle }}" onclick="openMenu('deathVibration')">
         <div class="item-copy">
-          <text class="item-title">D 震动</text>
-          <text class="item-desc">阵亡记录反馈</text>
+          <text class="item-title">{{ $t('settings.items.deathVibration.title') }}</text>
+          <text class="item-desc">{{ $t('settings.items.deathVibration.desc') }}</text>
         </div>
-        <text class="value-text">{{ deathVibrationLabel }}</text>
+        <text class="value-text">{{ $t(deathVibrationLabelKey) }}</text>
       </div>
 
-      <div class="settings-item" onclick="toggleAod">
+      <div class="settings-item" style="{{ settingsItemStyle }}" onclick="toggleAod">
         <div class="item-copy">
-          <text class="item-title">AOD</text>
-          <text class="item-desc">闲置后显示低亮战绩</text>
+          <text class="item-title">{{ $t('settings.items.aod.title') }}</text>
+          <text class="item-desc">{{ $t('settings.items.aod.desc') }}</text>
         </div>
-        <div class="{{ aodSwitchClass }}">
-          <div class="{{ aodThumbClass }}"></div>
+        <div class="{{ aodSwitchClass }}" style="{{ aodSwitchStyle }}">
+          <div class="{{ aodThumbClass }}" style="{{ aodThumbStyle }}"></div>
         </div>
       </div>
     </div>
@@ -50,20 +50,25 @@ import storage from "@system.storage"
 var sessionHelper = require("../../common/session.js")
 var navigation = require("../../common/navigation.js")
 var design = require("../../common/design.js")
+var settingConstants = require("../../common/constants/settings.js")
 
-var SETTINGS_KEY = "wargame_settings"
-var SETTINGS_MENU_KEY = "wargame_settings_menu"
+var SETTINGS_KEY = settingConstants.SETTINGS_KEY
 
 export default {
   private: {
     settings: sessionHelper.defaultSettings(),
-    triggerModeLabel: "长按",
-    killVibrationLabel: "短震",
-    deathVibrationLabel: "长震",
+    triggerModeLabelKey: "settings.options.longPress",
+    killVibrationLabelKey: "settings.options.shortVibration",
+    deathVibrationLabelKey: "settings.options.longVibration",
     aodSwitchClass: "switch-control",
     aodThumbClass: "switch-thumb",
+    aodSwitchStyle: design.STYLES.switchOff,
+    aodThumbStyle: design.STYLES.switchThumb,
+    pageStyle: design.STYLES.page,
+    statusStyle: design.STYLES.statusPill,
+    settingsItemStyle: design.STYLES.settingsItem,
     pagePaddingStyle: design.pagePaddingStyle("square"),
-    statusText: "已保存",
+    statusKey: "common.saveSuccess",
     touchStartX: 0,
     touchStartY: 0,
     destroyed: false
@@ -93,37 +98,33 @@ export default {
   },
 
   openMenu(type) {
-    var self = this
+    if (!settingConstants.SETTING_MENUS[type]) {
+      this.statusKey = "settings.openFail"
+      return
+    }
 
-    this.writeStorage(SETTINGS_MENU_KEY, type, function (saved) {
-      if (self.destroyed) {
-        return
+    router.push({
+      uri: "/pages/settings-option",
+      params: {
+        menuType: type
       }
-
-      if (!saved) {
-        self.statusText = "打开失败"
-        return
-      }
-
-      router.push({
-        uri: "/pages/settings-option"
-      })
     })
   },
 
   applySettings() {
-    var vibrationLabels = {
-      short: "短震",
-      double: "快速两次",
-      long: "长震",
-      off: "关闭"
-    }
-
-    this.triggerModeLabel = this.settings.triggerMode === "click" ? "点击" : "长按"
-    this.killVibrationLabel = vibrationLabels[this.settings.killVibration] || vibrationLabels.short
-    this.deathVibrationLabel = vibrationLabels[this.settings.deathVibration] || vibrationLabels.long
+    this.triggerModeLabelKey = settingConstants.getOptionLabelKey("trigger", this.settings.triggerMode)
+    this.killVibrationLabelKey = settingConstants.getOptionLabelKey(
+      "killVibration",
+      this.settings.killVibration
+    )
+    this.deathVibrationLabelKey = settingConstants.getOptionLabelKey(
+      "deathVibration",
+      this.settings.deathVibration
+    )
     this.aodSwitchClass = this.settings.aodEnabled ? "switch-control switch-on" : "switch-control"
     this.aodThumbClass = this.settings.aodEnabled ? "switch-thumb switch-thumb-on" : "switch-thumb"
+    this.aodSwitchStyle = this.settings.aodEnabled ? design.STYLES.switchOn : design.STYLES.switchOff
+    this.aodThumbStyle = design.STYLES.switchThumb
   },
 
   loadSettings() {
@@ -148,7 +149,7 @@ export default {
         return
       }
 
-      self.statusText = saved ? "已保存" : "保存失败"
+      self.statusKey = saved ? "common.saveSuccess" : "common.saveFail"
     })
   },
 
@@ -230,7 +231,6 @@ export default {
   flex: 1;
   flex-direction: column;
   align-items: center;
-  background-color: #000000;
   animation-name: pageSlideIn;
   animation-duration: 180ms;
   animation-timing-function: ease-out;
@@ -249,7 +249,7 @@ export default {
   }
 }
 
-.top-row {
+.title-bar {
   width: 100%;
   height: 54px;
   margin-top: 22px;
@@ -267,12 +267,17 @@ export default {
 .status-text {
   width: 92px;
   height: 30px;
-  border-radius: 15px;
-  background-color: rgba(255, 255, 255, 0.14);
-  color: #d8d8d8;
   font-size: 16px;
   text-align: center;
   line-height: 30px;
+}
+
+.title-bar {
+  width: 100%;
+  height: 60px;
+  margin-top: 0px;
+  padding-left: 70px;
+  padding-right: 70px;
 }
 
 .settings-list {
@@ -288,11 +293,9 @@ export default {
   margin-top: 8px;
   padding-left: 16px;
   padding-right: 12px;
-  border-radius: 8px;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  background-color: #171717;
 }
 
 .item-copy {
@@ -327,14 +330,6 @@ export default {
   flex: 1;
 }
 
-.top-row {
-  width: 100%;
-  height: 60px;
-  margin-top: 0px;
-  padding-left: 70px;
-  padding-right: 70px;
-}
-
 .settings-list {
   width: 100%;
   height: 420px;
@@ -342,8 +337,6 @@ export default {
 
 .settings-item {
   height: 84px;
-  border-radius: 18px;
-  background-color: #555555;
 }
 
 .value-text {
@@ -358,12 +351,9 @@ export default {
   position: relative;
   width: 76px;
   height: 42px;
-  border-radius: 21px;
-  background-color: #999999;
 }
 
 .switch-on {
-  background-color: #67df79;
 }
 
 .switch-thumb {
@@ -372,17 +362,14 @@ export default {
   top: 4px;
   width: 34px;
   height: 34px;
-  border-radius: 17px;
-  background-color: #ffffff;
 }
 
 .switch-thumb-on {
   left: 38px;
-  background-color: #ffffff;
 }
 
 @media screen and (shape: circle) {
-  .top-row {
+  .title-bar {
   }
 
   .settings-list {

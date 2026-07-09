@@ -1,17 +1,18 @@
 <template>
-  <div class="settings-option-page" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
-    <div class="top-row">
-      <text class="page-title">{{ menuTitle }}</text>
-      <text class="status-text">{{ statusText }}</text>
+  <div class="settings-option-page" style="{{ pageStyle }}" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
+    <div class="title-bar">
+      <text class="page-title">{{ $t(menuTitleKey) }}</text>
+      <text class="status-text">{{ $t(statusKey) }}</text>
     </div>
 
     <div class="menu-panel" style="{{ pagePaddingStyle }}">
       <div
         class="{{ $item.optionClass }}"
         for="{{ menuOptions }}"
+        style="{{ $item.optionStyle }}"
         onclick="selectOption($item.value)"
       >
-        <text class="menu-option-text">{{ $item.label }}</text>
+        <text class="menu-option-text">{{ $t($item.labelKey) }}</text>
       </div>
     </div>
   </div>
@@ -21,21 +22,22 @@
 import router from "@system.router"
 import storage from "@system.storage"
 
-var sessionHelper = require("../../common/session.js")
 var navigation = require("../../common/navigation.js")
 var design = require("../../common/design.js")
-
-var SETTINGS_KEY = "wargame_settings"
-var SETTINGS_MENU_KEY = "wargame_settings_menu"
+var optionPage = require("../../common/option-page.js")
 
 export default {
+  protected: {
+    menuType: "trigger"
+  },
+
   private: {
-    // 用 default setting 导致进入后短暂高亮错误选项
-    settings: sessionHelper.defaultSettings(),
-    menuType: "trigger",
-    menuTitle: "触发方式",
+    storageKey: "",
+    storageValue: "",
+    menuTitleKey: "settings.items.trigger.title",
     menuOptions: [],
-    statusText: "",
+    statusKey: "common.saveSuccess",
+    pageStyle: design.STYLES.page,
     pagePaddingStyle: design.pagePaddingStyle("square"),
     touchStartX: 0,
     touchStartY: 0,
@@ -44,7 +46,6 @@ export default {
 
   onInit() {
     this.destroyed = false
-    this.loadMenu()
     this.loadSettings()
   },
 
@@ -52,104 +53,49 @@ export default {
     this.destroyed = true
   },
 
-  loadMenu() {
-    var self = this
-
-    this.readStorage(SETTINGS_MENU_KEY, function (value) {
-      if (self.destroyed) {
-        return
-      }
-
-      if (value === "killVibration" || value === "deathVibration" || value === "trigger") {
-        self.menuType = value
-      }
-
-      self.applyMenu()
-    })
-  },
-
   loadSettings() {
     var self = this
 
-    this.readStorage(SETTINGS_KEY, function (value) {
+    this.storageKey = optionPage.getOptionPageStorageKey(this.menuType)
+
+    this.readStorage(this.storageKey, function (value) {
       if (self.destroyed) {
         return
       }
 
-      self.settings = sessionHelper.normalizeSettings(self.parseJson(value))
+      self.storageValue = value
       self.applyMenu()
     })
   },
 
   applyMenu() {
-    // TODO 好个硬编码……从外界传入，路由做不到传参吗？
-    var vibrationOptions = [
-      {label: "短震", value: "short"},
-      {label: "快速两次", value: "double"},
-      {label: "长震", value: "long"},
-      {label: "关闭", value: "off"}
-    ]
-    var selected = ""
+    var model = optionPage.createOptionPageModel(this.menuType, this.storageValue)
 
-    if (this.menuType === "trigger") {
-      this.menuTitle = "触发方式"
-      selected = this.settings.triggerMode
-      this.menuOptions = this.withSelectedClass(
-        [
-          {label: "长按", value: "longPress"},
-          {label: "点击", value: "click"}
-        ],
-        selected
-      )
-      return
-    }
-
-    this.menuTitle = this.menuType === "killVibration" ? "K 震动" : "D 震动"
-    selected =
-      this.menuType === "killVibration" ? this.settings.killVibration : this.settings.deathVibration
-    this.menuOptions = this.withSelectedClass(vibrationOptions, selected)
-  },
-
-  withSelectedClass(options, selected) {
-    return options.map(function (option) {
-      return {
-        label: option.label,
-        value: option.value,
-        optionClass: option.value === selected ? "menu-option selected-option" : "menu-option"
-      }
-    })
+    this.storageKey = model.storageKey
+    this.menuTitleKey = model.titleKey
+    this.menuOptions = model.options
   },
 
   selectOption(value) {
-    if (this.menuType === "trigger") {
-      this.settings.triggerMode = value
-    }
-
-    if (this.menuType === "killVibration") {
-      this.settings.killVibration = value
-    }
-
-    if (this.menuType === "deathVibration") {
-      this.settings.deathVibration = value
-    }
-
-    this.saveSettings()
+    this.saveSelectedValue(value)
   },
 
-  saveSettings() {
+  saveSelectedValue(value) {
     var self = this
+    var nextValue = optionPage.createOptionPageStorageValue(this.menuType, this.storageValue, value)
 
-    this.writeStorage(SETTINGS_KEY, JSON.stringify(this.settings), function (saved) {
+    this.writeStorage(this.storageKey, nextValue, function (saved) {
       if (self.destroyed) {
         return
       }
 
       if (!saved) {
-        self.statusText = "保存失败"
+        self.statusKey = "common.saveFail"
         return
       }
 
-      self.statusText = "已保存"
+      self.statusKey = "common.saveSuccess"
+      self.storageValue = nextValue
       router.back()
     })
   },
@@ -210,18 +156,6 @@ export default {
     } catch (error) {
       done(false)
     }
-  },
-
-  parseJson(value) {
-    try {
-      if (!value || typeof value !== "string") {
-        return null
-      }
-
-      return JSON.parse(value)
-    } catch (error) {
-      return null
-    }
   }
 }
 </script>
@@ -244,14 +178,13 @@ export default {
   flex: 1;
   flex-direction: column;
   align-items: center;
-  background-color: #000000;
   animation-name: pageSlideIn;
   animation-duration: 180ms;
   animation-timing-function: ease-out;
   page-animation-name: pageSlideIn;
 }
 
-.top-row {
+.title-bar {
   width: 100%;
   height: 60px;
   padding-left: 70px;
@@ -288,14 +221,11 @@ export default {
   width: 100%;
   height: 84px;
   margin-top: 8px;
-  border-radius: 18px;
   justify-content: center;
   align-items: center;
-  background-color: #555555;
 }
 
 .selected-option {
-  background-color: #777777;
 }
 
 .menu-option-text {

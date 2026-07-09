@@ -5,7 +5,7 @@
     </div>
 
     <div class="center-zone">
-      <div class="top-row">
+      <div class="center-top-row">
         <div class="time-pill">
           <text class="time-text">{{ clockText }}</text>
           <image class="record-icon" src="{{ recordIcon }}"></image>
@@ -14,14 +14,14 @@
 
       <text class="date-text">{{ dateText }}</text>
       <text class="duration-text">{{ durationText }}</text>
-      <text class="error-text" if="{{ errorText }}">{{ errorText }}</text>
+      <text class="error-text" if="{{ errorKey }}">{{ $t(errorKey) }}</text>
 
       <div class="{{ mainActionClass }}" onclick="handleMainAction">
         <image class="main-action-icon" src="{{ mainActionIcon }}"></image>
       </div>
 
       <div class="ratio-block">
-        <text class="ratio-label">k/d</text>
+        <text class="ratio-label">{{ $t('battle.ratio') }}</text>
         <text class="ratio-value">{{ ratioText }}</text>
       </div>
 
@@ -40,7 +40,7 @@
       <text class="side-count">{{ deathCount }}</text>
     </div>
 
-    <div class="undo-overlay" if="{{ showUndoPanel }}" onclick="closeUndoPanel">
+    <div class="action-overlay" if="{{ showUndoPanel }}" onclick="closeUndoPanel">
       <div class="undo-actions">
         <input
           class="overlay-action overlay-kill"
@@ -60,12 +60,12 @@
       </div>
     </div>
 
-    <div class="more-overlay" if="{{ showMorePanel }}" onclick="closeMorePanel">
+    <div class="action-overlay" if="{{ showMorePanel }}" onclick="closeMorePanel">
       <div class="more-actions">
-        <div class="more-action" onclick="openHistory">
+        <div class="icon-action" onclick="openHistory">
           <image class="more-icon" src="/common/history.png"></image>
         </div>
-        <div class="more-action" onclick="openSettings">
+        <div class="icon-action" onclick="openSettings">
           <image class="more-icon" src="/common/settings.png"></image>
         </div>
       </div>
@@ -73,16 +73,16 @@
 
     <div class="confirm-overlay" if="{{ showConfirm }}">
       <div class="confirm-dialog">
-        <text class="confirm-title">{{ confirmTitle }}</text>
-        <text class="confirm-message">{{ confirmMessage }}</text>
+        <text class="confirm-title">{{ $t(confirmTitleKey) }}</text>
+        <text class="confirm-message">{{ $t(confirmMessageKey) }}</text>
         <div class="confirm-actions">
           <input
             class="confirm-button cancel-button"
             type="button"
-            value="取消"
+            value="{{ $t('common.cancel') }}"
             onclick="cancelConfirm"
           />
-          <input class="confirm-button ok-button" type="button" value="确认" onclick="runConfirm" />
+          <input class="confirm-button ok-button" type="button" value="{{ $t('common.confirm') }}" onclick="runConfirm" />
         </div>
       </div>
     </div>
@@ -119,16 +119,17 @@ export default {
     aodClockText: "00:00:00",
     dateText: "",
     recordIcon: "/common/record-off.png",
-    mainActionText: "开始",
+    mainActionText: "",
+    mainActionTextKey: "battle.start",
     mainActionClass: "main-action start-action",
     mainActionIcon: "/common/play.png",
     showUndoPanel: false,
     showMorePanel: false,
     showConfirm: false,
-    confirmTitle: "",
-    confirmMessage: "",
+    confirmTitleKey: "battle.stopTitle",
+    confirmMessageKey: "battle.stopMessage",
     confirmAction: "",
-    errorText: "",
+    errorKey: "",
     aodActive: false,
     aodSummaryText: "K 0 / D 0",
     timerId: 0,
@@ -172,8 +173,8 @@ export default {
 
     this.resetIdleTimer()
     if (this.currentSession) {
-      this.confirmTitle = "停止本局"
-      this.confirmMessage = "确认结束并保存本局记录？"
+      this.confirmTitleKey = "battle.stopTitle"
+      this.confirmMessageKey = "battle.stopMessage"
       this.confirmAction = "stop"
       this.showConfirm = true
       return
@@ -331,11 +332,11 @@ export default {
       }
 
       if (!saved) {
-        self.errorText = "保存失败"
+        self.errorKey = "common.saveFail"
         return
       }
 
-      self.errorText = ""
+      self.errorKey = ""
       self.currentSession = null
       self.applySession()
       self.saveCurrent()
@@ -376,7 +377,8 @@ export default {
     this.durationText = display.durationText
     this.aodSummaryText = display.aodSummaryText
     this.recordIcon = display.running ? "/common/record-on.png" : "/common/record-off.png"
-    this.mainActionText = display.running ? "停止" : "开始"
+    this.mainActionText = ""
+    this.mainActionTextKey = display.running ? "battle.stop" : "battle.start"
     this.mainActionClass = display.running ? "main-action stop-action" : "main-action start-action"
     this.mainActionIcon = display.running ? "/common/stop.png" : "/common/play.png"
   },
@@ -658,7 +660,7 @@ export default {
   background-color: #555555;
 }
 
-.top-row {
+.center-top-row {
   width: 124px;
   height: 36px;
   margin-top: 22px;
@@ -678,7 +680,7 @@ export default {
   line-height: 30px;
 }
 
-.top-row {
+.center-top-row {
   width: 150px;
   justify-content: center;
   align-items: center;
@@ -798,18 +800,6 @@ export default {
 
 .active-dot {
   background-color: #ffffff;
-}
-
-.undo-overlay {
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  right: 0px;
-  bottom: 0px;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(34, 34, 34, 0.75);
 }
 
 .overlay-action {
@@ -1005,8 +995,7 @@ export default {
   background-color: #d9d9d9;
 }
 
-.undo-overlay,
-.more-overlay,
+.action-overlay,
 .confirm-overlay {
   position: absolute;
   left: 0px;
@@ -1017,13 +1006,8 @@ export default {
   align-items: center;
 }
 
-.undo-overlay,
-.more-overlay {
+.action-overlay {
   background-color: rgba(34, 34, 34, 0.75);
-}
-
-.undo-overlay {
-  flex-direction: row;
 }
 
 .undo-actions {
@@ -1066,7 +1050,7 @@ export default {
   align-items: center;
 }
 
-.more-action {
+.icon-action {
   width: 106px;
   height: 106px;
   border-radius: 18px;
@@ -1191,7 +1175,7 @@ export default {
     padding-bottom: 18px;
   }
 
-  .top-row {
+  .center-top-row {
     margin-top: 20px;
   }
 
@@ -1228,5 +1212,6 @@ export default {
   .confirm-dialog {
     width: 320px;
   }
+
 }
 </style>

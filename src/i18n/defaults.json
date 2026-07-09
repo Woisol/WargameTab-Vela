@@ -1,1 +1,68 @@
-{"a":{"b":"default hello"}}
+{
+  "common": {
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除",
+    "saveSuccess": "已保存",
+    "saveFail": "保存失败"
+  },
+  "battle": {
+    "ratio": "k/d",
+    "start": "开始",
+    "stop": "停止",
+    "stopTitle": "停止本局",
+    "stopMessage": "确认结束并保存本局记录？",
+    "aodSummary": "K {kills} / D {deaths}"
+  },
+  "history": {
+    "title": "历史战绩",
+    "empty": "暂无历史记录",
+    "deleteTitle": "删除记录",
+    "deleteMessage": "确认删除这条历史战绩？",
+    "selectFail": "选择失败",
+    "deleteFail": "删除失败",
+    "synced": "（已同步）",
+    "unsynced": "（未同步）"
+  },
+  "review": {
+    "title": "复盘",
+    "titleWithDate": "{date} 复盘",
+    "empty": "暂无复盘记录",
+    "synced": "已同步",
+    "unsyncedRetry": "未同步（点击重试）",
+    "duration": "总时长：{minutes} 分钟 {seconds} 秒",
+    "durationPrefix": "总时长：",
+    "minuteUnit": " 分钟 ",
+    "secondUnit": " 秒"
+  },
+  "settings": {
+    "title": "设置",
+    "openFail": "打开失败",
+    "items": {
+      "trigger": {
+        "title": "触发方式",
+        "desc": "记录 K / D 的手势"
+      },
+      "killVibration": {
+        "title": "K 震动",
+        "desc": "击杀记录反馈"
+      },
+      "deathVibration": {
+        "title": "D 震动",
+        "desc": "阵亡记录反馈"
+      },
+      "aod": {
+        "title": "AOD",
+        "desc": "闲置后显示低亮战绩"
+      }
+    },
+    "options": {
+      "longPress": "长按",
+      "click": "点击",
+      "shortVibration": "短震",
+      "doubleVibration": "快速两次",
+      "longVibration": "长震",
+      "off": "关闭"
+    }
+  }
+}

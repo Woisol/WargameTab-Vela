@@ -1,1 +1,68 @@
-{"a":{"b":"hello"}}
+{
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "saveSuccess": "Saved",
+    "saveFail": "Save failed"
+  },
+  "battle": {
+    "ratio": "k/d",
+    "start": "Start",
+    "stop": "Stop",
+    "stopTitle": "Stop session",
+    "stopMessage": "End and save this session?",
+    "aodSummary": "K {kills} / D {deaths}"
+  },
+  "history": {
+    "title": "History",
+    "empty": "No history yet",
+    "deleteTitle": "Delete record",
+    "deleteMessage": "Delete this battle record?",
+    "selectFail": "Select failed",
+    "deleteFail": "Delete failed",
+    "synced": "(Synced)",
+    "unsynced": "(Unsynced)"
+  },
+  "review": {
+    "title": "Review",
+    "titleWithDate": "{date} Review",
+    "empty": "No review record",
+    "synced": "Synced",
+    "unsyncedRetry": "Unsynced (tap to retry)",
+    "duration": "Duration: {minutes}m {seconds}s",
+    "durationPrefix": "Duration: ",
+    "minuteUnit": "m ",
+    "secondUnit": "s"
+  },
+  "settings": {
+    "title": "Settings",
+    "openFail": "Open failed",
+    "items": {
+      "trigger": {
+        "title": "Trigger",
+        "desc": "Gesture for K / D records"
+      },
+      "killVibration": {
+        "title": "K vibration",
+        "desc": "Feedback for kill records"
+      },
+      "deathVibration": {
+        "title": "D vibration",
+        "desc": "Feedback for death records"
+      },
+      "aod": {
+        "title": "AOD",
+        "desc": "Dim stats while idle"
+      }
+    },
+    "options": {
+      "longPress": "Long press",
+      "click": "Tap",
+      "shortVibration": "Short",
+      "doubleVibration": "Double",
+      "longVibration": "Long",
+      "off": "Off"
+    }
+  }
+}

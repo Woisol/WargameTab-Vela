@@ -1,14 +1,14 @@
 <template>
   <div class="history-page" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
-    <div class="top-row">
-      <text class="page-title">历史战绩</text>
+    <div class="title-bar">
+      <text class="page-title">{{ $t('history.title') }}</text>
       <text class="clock-text">{{ clockText }}</text>
     </div>
 
-    <text class="error-text" if="{{ errorText }}">{{ errorText }}</text>
+    <text class="error-text" if="{{ errorKey }}">{{ $t(errorKey) }}</text>
 
     <div class="empty-box" if="{{ displayItems.length === 0 }}">
-      <text class="empty-text">暂无历史记录</text>
+      <text class="empty-text">{{ $t('history.empty') }}</text>
     </div>
 
     <list class="history-list" if="{{ displayItems.length > 0 }}">
@@ -23,7 +23,7 @@
         <div class="{{ $item.itemContentClass }}">
           <div class="item-main">
             <text class="item-date">{{ $item.dateText }}</text>
-            <text class="item-status">{{ $item.statusText }}</text>
+            <text class="item-status">{{ $t($item.statusKey) }}</text>
           </div>
           <text class="item-summary">k {{ $item.kills }} | d {{ $item.deaths }} | k/d {{ $item.ratioText }}</text>
         </div>
@@ -39,11 +39,11 @@
 
     <div class="confirm-overlay" if="{{ showConfirm }}">
       <div class="confirm-dialog">
-        <text class="confirm-title">删除记录</text>
-        <text class="confirm-message">确认删除这条历史战绩？</text>
+        <text class="confirm-title">{{ $t('history.deleteTitle') }}</text>
+        <text class="confirm-message">{{ $t('history.deleteMessage') }}</text>
         <div class="confirm-actions">
-          <input class="confirm-button cancel-button" type="button" value="取消" onclick="cancelDelete" />
-          <input class="confirm-button ok-button" type="button" value="删除" onclick="deleteSelected" />
+          <input class="confirm-button cancel-button" type="button" value="{{ $t('common.cancel') }}" onclick="cancelDelete" />
+          <input class="confirm-button ok-button" type="button" value="{{ $t('common.delete') }}" onclick="deleteSelected" />
         </div>
       </div>
     </div>
@@ -64,7 +64,7 @@ export default {
     history: [],
     historyItems: [],
     displayItems: [],
-    errorText: "",
+    errorKey: "",
     showConfirm: false,
     deletingSessionId: "",
     deleteReadySessionId: "",
@@ -124,14 +124,14 @@ export default {
       return
     }
 
-    this.errorText = ""
+    this.errorKey = ""
     this.writeStorage(SELECTED_KEY, JSON.stringify(selected), function (saved) {
       if (self.destroyed) {
         return
       }
 
       if (!saved) {
-        self.errorText = "选择失败"
+        self.errorKey = "history.selectFail"
         return
       }
 
@@ -184,12 +184,12 @@ export default {
       if (!saved) {
         self.history = previousHistory
         self.applyHistory(previousHistory)
-        self.errorText = "删除失败"
+        self.errorKey = "history.deleteFail"
         self.cancelDelete()
         return
       }
 
-      self.errorText = ""
+      self.errorKey = ""
       self.history = nextHistory
       self.applyHistory(nextHistory)
       self.cancelDelete()
@@ -226,7 +226,7 @@ export default {
       return {
         sessionId: session && session.sessionId ? session.sessionId : "",
         dateText: self.formatDate(session && session.startTime),
-        statusText: session && session.status === "synced" ? "（已同步）" : "（未同步）",
+        statusKey: session && session.status === "synced" ? "history.synced" : "history.unsynced",
         kills: kills,
         deaths: deaths,
         ratioText: deaths === 0 ? kills.toFixed(2) : (kills / deaths).toFixed(2),
@@ -396,7 +396,7 @@ export default {
   }
 }
 
-.top-row {
+.title-bar {
   width: 100%;
   height: 54px;
   margin-top: 22px;
@@ -503,7 +503,7 @@ export default {
   flex: 1;
 }
 
-.top-row {
+.title-bar {
   width: 100%;
   height: 60px;
   margin-top: 0px;
@@ -685,7 +685,7 @@ export default {
 }
 
 @media screen and (shape: circle) {
-  .top-row {
+  .title-bar {
     padding-left: 70px;
     padding-right: 70px;
   }

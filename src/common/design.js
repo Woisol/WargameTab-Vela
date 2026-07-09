@@ -1,7 +1,6 @@
-var PAGE_PADDING = {
-  square: 10,
-  circle: 48
-}
+var designConstants = require("./constants/design.js")
+
+var PAGE_PADDING = designConstants.PAGE_PADDING
 
 function pagePaddingStyle(shape) {
   var value = shape === "circle" ? PAGE_PADDING.circle : PAGE_PADDING.square
@@ -11,5 +10,6 @@ function pagePaddingStyle(shape) {
 
 module.exports = {
   PAGE_PADDING: PAGE_PADDING,
+  STYLES: designConstants.STYLES,
   pagePaddingStyle: pagePaddingStyle
 }

@@ -1,17 +1,17 @@
 <template>
   <div class="review-page" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
-    <div class="top-row">
-      <text class="page-title">{{ titleText }}</text>
+    <div class="title-bar">
+      <text class="page-title">{{ titleDateText }}{{ $t('review.title') }}</text>
       <text class="clock-text">{{ clockText }}</text>
     </div>
 
     <div class="empty-box" if="{{ !hasSession }}">
-      <text class="empty-text">暂无复盘记录</text>
+      <text class="empty-text">{{ $t('review.empty') }}</text>
     </div>
 
     <scroll class="review-body" scroll-y="true" if="{{ hasSession }}">
       <div class="review-content-item">
-        <text class="sync-text" onclick="retrySync">{{ syncText }}</text>
+        <text class="sync-text" onclick="retrySync">{{ $t(syncKey) }}</text>
 
       <div class="summary-panel">
         <div class="score-block kill-block">
@@ -30,7 +30,7 @@
 
       <div class="info-card">
         <text class="time-range">{{ rangeText }}</text>
-        <text class="duration-text">{{ durationText }}</text>
+        <text class="duration-text">{{ $t('review.durationPrefix') }}{{ durationMinutes }}{{ $t('review.minuteUnit') }}{{ durationSeconds }}{{ $t('review.secondUnit') }}</text>
       </div>
 
       <div class="timeline-card">
@@ -73,14 +73,15 @@ var SELECTED_KEY = "wargame_selected_session"
 export default {
   private: {
     hasSession: false,
-    titleText: "复盘",
+    titleDateText: "",
     clockText: "00:00",
     ratioText: "0.00",
-    syncText: "未同步（点击重试）",
+    syncKey: "review.unsyncedRetry",
     killCount: 0,
     deathCount: 0,
     rangeText: "--:--:-- - --:--:--",
-    durationText: "总时长：0 分钟 0 秒",
+    durationMinutes: 0,
+    durationSeconds: 0,
     timelineItems: [],
     timelineAxisItems: [],
     timelineListItems: [],
@@ -156,13 +157,14 @@ export default {
     var minutes = Math.floor(totalSeconds / 60)
     var seconds = totalSeconds % 60
     this.hasSession = true
-    this.titleText = this.formatDate(startTime) + " 复盘"
+    this.titleDateText = this.formatDate(startTime) + " "
     this.ratioText = sessionHelper.getKdRatio({kills: kills, deaths: deaths})
-    this.syncText = session.status === "synced" ? "已同步" : "未同步（点击重试）"
+    this.syncKey = session.status === "synced" ? "review.synced" : "review.unsyncedRetry"
     this.killCount = kills
     this.deathCount = deaths
     this.rangeText = this.formatClock(startTime) + " - " + this.formatClock(endTime)
-    this.durationText = "总时长：" + minutes + " 分钟 " + seconds + " 秒"
+    this.durationMinutes = minutes
+    this.durationSeconds = seconds
     var events = Array.isArray(session.events) ? session.events : []
 
     this.timelineItems = sessionHelper.createReviewTimelineItems(events, totalSeconds)
@@ -171,8 +173,8 @@ export default {
   },
 
   retrySync() {
-    if (this.syncText !== "已同步") {
-      this.syncText = "未同步（点击重试）"
+    if (this.syncKey !== "review.synced") {
+      this.syncKey = "review.unsyncedRetry"
     }
   },
 
@@ -287,7 +289,7 @@ export default {
   page-animation-name: pageSlideIn;
 }
 
-.top-row {
+.title-bar {
   width: 100%;
   height: 60px;
   padding-left: 70px;
@@ -544,7 +546,7 @@ export default {
 }
 
 @media screen and (shape: circle) {
-  .top-row {
+  .title-bar {
     padding-left: 72px;
     padding-right: 72px;
   }
