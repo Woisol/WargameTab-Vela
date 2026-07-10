@@ -148,7 +148,7 @@ function formatEventTime(value) {
   return Math.floor(totalSeconds / 60) + ":" + padTime(totalSeconds % 60)
 }
 
-var REVIEW_TIMELINE_TRACK_WIDTH = 480
+var REVIEW_TIMELINE_TRACK_WIDTH = 350
 var REVIEW_TIMELINE_MARKER_WIDTH = 5
 var REVIEW_TIMELINE_AXIS_LABEL_WIDTH = 86
 
