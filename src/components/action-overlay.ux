@@ -65,20 +65,18 @@ export default {
 }
 
 .overlay-actions-horizontal {
-  width: 384px;
-  height: 106px;
   flex-direction: row;
 }
 
 .overlay-actions-vertical {
-  width: 106px;
-  height: 252px;
   flex-direction: column;
+  /* gap: 10px; */
 }
 
 .overlay-action {
   width: 95px;
   height: 98px;
+  margin: 10px;
   border-radius: 18px;
   border-width: 1px;
   border-color: #dbdbdb;

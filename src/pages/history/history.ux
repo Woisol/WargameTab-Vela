@@ -3,15 +3,12 @@
 
 <template>
   <div class="history-page" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
-    <title-bar
-      title-text="{{ $t('history.title') }}"
-      right-text="{{ clockText }}"
-    ></title-bar>
+    <title-bar title-text="{{ $t('history.title') }}" right-text="{{ clockText }}"></title-bar>
 
     <text class="error-text" if="{{ errorKey }}">{{ $t(errorKey) }}</text>
 
     <div class="empty-box" if="{{ displayItems.length === 0 }}">
-      <text class="empty-text">{{ $t('history.empty') }}</text>
+      <text class="empty-text">{{ $t("history.empty") }}</text>
     </div>
 
     <list class="history-list" if="{{ displayItems.length > 0 }}">
@@ -28,7 +25,9 @@
             <text class="item-date">{{ $item.dateText }}</text>
             <text class="item-status">{{ $t($item.statusKey) }}</text>
           </div>
-          <text class="item-summary">k {{ $item.kills }} | d {{ $item.deaths }} | k/d {{ $item.ratioText }}</text>
+          <text class="item-summary">
+            k {{ $item.kills }} | d {{ $item.deaths }} | k/d {{ $item.ratioText }}
+          </text>
         </div>
         <div
           class="{{ $item.deleteActionClass }}"
@@ -247,7 +246,10 @@ export default {
   handleTouchEnd(event) {
     var point = navigation.getTouchPoint(event)
 
-    if (this.deleteReadySessionId && navigation.isBackSwipe(this.touchStartX, point.x, this.touchStartY, point.y)) {
+    if (
+      this.deleteReadySessionId &&
+      navigation.isBackSwipe(this.touchStartX, point.x, this.touchStartY, point.y)
+    ) {
       this.setDeleteReadySession("")
       this.ignoreNextBackSwipe = false
       return
@@ -273,7 +275,10 @@ export default {
   handleItemTouchEnd(sessionId, event) {
     var point = navigation.getTouchPoint(event)
 
-    if (this.deleteReadySessionId === sessionId && navigation.isBackSwipe(this.itemTouchStartX, point.x, this.itemTouchStartY, point.y)) {
+    if (
+      this.deleteReadySessionId === sessionId &&
+      navigation.isBackSwipe(this.itemTouchStartX, point.x, this.itemTouchStartY, point.y)
+    ) {
       this.ignoreNextBackSwipe = true
       this.setDeleteReadySession("")
       return

@@ -141,7 +141,7 @@ export default {
     ],
     undoOverlayVertical: false,
     // Undo 面板向下稍微偏移，实现双击主页 Undo 按钮快速撤回的效果
-    undoOverlayStyle: "bottom: 18px;",
+    undoOverlayStyle: "bottom: 80px;",
     moreOverlayActions: [
       {
         eventName: "history",
@@ -161,7 +161,7 @@ export default {
       }
     ],
     moreOverlayVertical: true,
-    moreOverlayStyle: "right: 40px; bottom: 40px;",
+    moreOverlayStyle: "bottom: 40px;",
     confirmTitleKey: "battle.stopTitle",
     confirmMessageKey: "battle.stopMessage",
     confirmAction: "",
