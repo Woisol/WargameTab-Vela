@@ -1,9 +1,11 @@
+<import src="../../components/title-bar.ux" name="title-bar"></import>
+
 <template>
   <div class="review-page" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
-    <div class="title-bar">
-      <text class="page-title">{{ titleDateText }}{{ $t('review.title') }}</text>
-      <text class="clock-text">{{ clockText }}</text>
-    </div>
+    <title-bar
+      title-text="{{ titleDateText }}{{ $t('review.title') }}"
+      right-text="{{ clockText }}"
+    ></title-bar>
 
     <div class="empty-box" if="{{ !hasSession }}">
       <text class="empty-text">{{ $t('review.empty') }}</text>
@@ -64,8 +66,8 @@
 import router from "@system.router"
 import storage from "@system.storage"
 
-var sessionHelper = require("../../common/session.js")
 var navigation = require("../../common/navigation.js")
+var reviewPage = require("../../common/review-page.js")
 
 var HISTORY_KEY = "wargame_history"
 var SELECTED_KEY = "wargame_selected_session"
@@ -124,7 +126,7 @@ export default {
 
       var selected = self.parseJson(selectedValue)
 
-      if (self.isValidSession(selected)) {
+      if (reviewPage.isValidSession(selected)) {
         self.applySession(selected)
         return
       }
@@ -136,7 +138,7 @@ export default {
 
         var history = self.parseJson(historyValue)
 
-        if (Array.isArray(history) && history.length > 0 && self.isValidSession(history[0])) {
+        if (Array.isArray(history) && history.length > 0 && reviewPage.isValidSession(history[0])) {
           self.applySession(history[0])
           return
         }
@@ -147,29 +149,24 @@ export default {
   },
 
   applySession(session) {
-    var summary = session.summary || {}
-    var kills = typeof summary.kills === "number" ? summary.kills : 0
-    var deaths = typeof summary.deaths === "number" ? summary.deaths : 0
-    var startTime = typeof session.startTime === "number" ? session.startTime : 0
-    var endTime =
-      typeof session.endTime === "number" && session.endTime > 0 ? session.endTime : startTime
-    var totalSeconds = Math.max(0, Math.floor((endTime - startTime) / 1000))
-    var minutes = Math.floor(totalSeconds / 60)
-    var seconds = totalSeconds % 60
-    this.hasSession = true
-    this.titleDateText = this.formatDate(startTime) + " "
-    this.ratioText = sessionHelper.getKdRatio({kills: kills, deaths: deaths})
-    this.syncKey = session.status === "synced" ? "review.synced" : "review.unsyncedRetry"
-    this.killCount = kills
-    this.deathCount = deaths
-    this.rangeText = this.formatClock(startTime) + " - " + this.formatClock(endTime)
-    this.durationMinutes = minutes
-    this.durationSeconds = seconds
-    var events = Array.isArray(session.events) ? session.events : []
+    var model = reviewPage.createReviewModel(session)
 
-    this.timelineItems = sessionHelper.createReviewTimelineItems(events, totalSeconds)
-    this.timelineAxisItems = sessionHelper.createReviewTimelineAxis(totalSeconds)
-    this.timelineListItems = this.timelineItems
+    this.hasSession = model.hasSession
+    if (!model.hasSession) {
+      return
+    }
+
+    this.titleDateText = model.titleDateText
+    this.ratioText = model.ratioText
+    this.syncKey = model.syncKey
+    this.killCount = model.killCount
+    this.deathCount = model.deathCount
+    this.rangeText = model.rangeText
+    this.durationMinutes = model.durationMinutes
+    this.durationSeconds = model.durationSeconds
+    this.timelineItems = model.timelineItems
+    this.timelineAxisItems = model.timelineAxisItems
+    this.timelineListItems = model.timelineListItems
   },
 
   retrySync() {
@@ -183,24 +180,8 @@ export default {
     this.clockText = this.pad(now.getHours()) + ":" + this.pad(now.getMinutes())
   },
 
-  formatDate(value) {
-    var date = new Date(typeof value === "number" && value > 0 ? value : Date.now())
-    return date.getFullYear() + "-" + this.pad(date.getMonth() + 1) + "-" + this.pad(date.getDate())
-  },
-
-  formatClock(value) {
-    var date = new Date(typeof value === "number" && value > 0 ? value : Date.now())
-    return (
-      this.pad(date.getHours()) +
-      ":" +
-      this.pad(date.getMinutes()) +
-      ":" +
-      this.pad(date.getSeconds())
-    )
-  },
-
   pad(value) {
-    return value < 10 ? "0" + value : String(value)
+    return reviewPage.pad(value)
   },
 
   handleTouchStart(event) {
@@ -249,348 +230,11 @@ export default {
     } catch (error) {
       return null
     }
-  },
-
-  isValidSession(session) {
-    return (
-      session &&
-      typeof session.sessionId === "string" &&
-      session.summary &&
-      typeof session.summary.kills === "number" &&
-      typeof session.summary.deaths === "number" &&
-      Array.isArray(session.events)
-    )
   }
 }
 </script>
 
 <style>
-@keyframes pageSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0px);
-  }
-}
-
-.review-page {
-  width: 100%;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  background-color: #000000;
-  animation-name: pageSlideIn;
-  animation-duration: 180ms;
-  animation-timing-function: ease-out;
-  page-animation-name: pageSlideIn;
-}
-
-.title-bar {
-  width: 100%;
-  height: 60px;
-  padding-left: 70px;
-  padding-right: 70px;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.page-title {
-  width: 260px;
-  font-size: 24px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.clock-text {
-  width: 68px;
-  height: 30px;
-  color: #ffffff;
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 30px;
-  text-align: left;
-}
-
-.empty-box {
-  width: 100%;
-  flex: 1;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-.empty-text {
-  font-size: 20px;
-  color: #8a8a8a;
-  text-align: center;
-}
-
-.review-body {
-  width: 100%;
-  flex: 1;
-  flex-direction: column;
-}
-
-.review-content-item {
-  position: relative;
-  width: 100%;
-  padding-left: 10px;
-  padding-right: 10px;
-  padding-bottom: 24px;
-  flex-direction: column;
-  align-items: center;
-}
-
-.sync-text {
-  position: absolute;
-  right: 10px;
-  top: 0px;
-  width: 232px;
-  height: 34px;
-  border-radius: 30px;
-  background-color: #555555;
-  color: #ffffff;
-  font-size: 20px;
-  line-height: 34px;
-  text-align: center;
-}
-
-.summary-panel {
-  width: 100%;
-  height: 200px;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.score-block {
-  position: relative;
-  width: 27%;
-  height: 180px;
-  margin-top: 10px;
-  justify-content: flex-end;
-  align-items: center;
-}
-
-.ratio-block {
-  width: 42%;
-  height: 180px;
-  margin-top: 10px;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-.ratio-value {
-  width: 100%;
-  font-size: 96px;
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 116px;
-  text-align: center;
-}
-
-.ratio-triangle {
-  width: 180px;
-  height: 40px;
-}
-
-.score-number {
-  width: 100%;
-  margin-bottom: 30px;
-  font-size: 64px;
-  font-weight: 400;
-  color: #dbdbdb;
-  line-height: 77px;
-  text-align: center;
-}
-
-.score-label {
-  position: absolute;
-  left: 0px;
-  top: 40px;
-  width: 100%;
-  font-size: 96px;
-  font-weight: 700;
-  line-height: 96px;
-  text-align: center;
-  opacity: 0.25;
-}
-
-.kill-ghost {
-  color: #ff1744;
-}
-
-.death-ghost {
-  color: #2979ff;
-}
-
-.info-card {
-  width: 100%;
-  height: 88px;
-  margin-top: 10px;
-  padding-left: 20px;
-  border-radius: 30px;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  background-color: #555555;
-}
-
-.time-range,
-.duration-text {
-  width: 100%;
-  height: 24px;
-  font-size: 20px;
-  color: #ffffff;
-  line-height: 24px;
-  text-align: left;
-}
-
-.duration-text {
-  margin-top: 10px;
-}
-
-.timeline-card {
-  width: 100%;
-  margin-top: 10px;
-  padding-bottom: 10px;
-  border-radius: 30px;
-  flex-direction: column;
-  background-color: #555555;
-}
-
-.timeline-track {
-  position: relative;
-  width: 480px;
-  height: 90px;
-}
-
-.timeline-marker {
-  position: absolute;
-  top: 59px;
-  width: 5px;
-  height: 20px;
-}
-
-.kill-marker {
-  background-color: #ff1744;
-}
-
-.death-marker {
-  background-color: #2979ff;
-}
-
-.timeline-axis {
-  position: relative;
-  width: 480px;
-  height: 30px;
-}
-
-.axis-line {
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 480px;
-  height: 2px;
-  background-color: #d9d9d9;
-}
-
-.axis-label {
-  position: absolute;
-  top: 5px;
-  width: 86px;
-  font-size: 20px;
-  color: #ffffff;
-  line-height: 24px;
-  text-align: center;
-}
-
-.timeline-list {
-  width: 100%;
-  padding-left: 20px;
-  padding-top: 4px;
-  padding-bottom: 10px;
-  flex-direction: column;
-}
-
-.event-item {
-  width: 100%;
-  height: 26px;
-  flex-direction: row;
-  align-items: center;
-}
-
-.event-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 6px;
-}
-
-.event-time {
-  width: 62px;
-  margin-left: 10px;
-  font-size: 16px;
-  color: #ffffff;
-}
-
-.event-type {
-  font-size: 16px;
-  font-weight: 700;
-  color: #d8d8d8;
-}
-
-@media screen and (shape: circle) {
-  .title-bar {
-    padding-left: 72px;
-    padding-right: 72px;
-  }
-
-  .review-body {
-    padding-bottom: 80px;
-  }
-
-  .review-content-item {
-    padding-left: 48px;
-    padding-right: 48px;
-    padding-top: 20px;
-  }
-
-  .sync-text {
-    right: 62px;
-    top: 0px;
-    width: 200px;
-    font-size: 16px;
-  }
-
-  .ratio-value {
-    font-size: 72px;
-    line-height: 86px;
-  }
-
-  .ratio-triangle {
-    width: 124px;
-    height: 28px;
-  }
-
-  .score-label {
-    font-size: 78px;
-    line-height: 78px;
-  }
-
-  .score-number {
-    font-size: 52px;
-  }
-
-  .time-range,
-  .duration-text,
-  .axis-label {
-    font-size: 18px;
-  }
-}
+@import "../../common/styles.css";
+@import "./review.css";
 </style>

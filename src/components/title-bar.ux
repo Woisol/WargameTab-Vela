@@ -1,11 +1,17 @@
 <template>
   <div class="title-bar">
-    <slot></slot>
+    <text class="title-text">{{ titleText }}</text>
+    <text class="title-right-text">{{ rightText }}</text>
   </div>
 </template>
 
 <script>
-export default {}
+export default {
+  props: {
+    titleText: "",
+    rightText: ""
+  }
+}
 </script>
 
 <style>
@@ -17,5 +23,32 @@ export default {}
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+}
+
+.title-text {
+  width: 260px;
+  height: 30px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 30px;
+  color: #ffffff;
+  text-align: left;
+}
+
+.title-right-text {
+  width: 92px;
+  height: 30px;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 30px;
+  text-align: right;
+}
+
+@media screen and (shape: circle) {
+  .title-bar {
+    padding-left: 70px;
+    padding-right: 70px;
+  }
 }
 </style>

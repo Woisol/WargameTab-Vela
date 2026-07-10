@@ -1,11 +1,14 @@
-﻿<template>
+﻿<import src="../../components/action-overlay.ux" name="action-overlay"></import>
+<import src="../../components/confirm-dialog.ux" name="confirm-dialog"></import>
+
+<template>
   <div class="battle-page" onclick="handlePageInteraction">
     <div class="zone kill-zone" onclick="tapKill" onlongpress="pressKill">
       <text class="side-count">{{ killCount }}</text>
     </div>
 
     <div class="center-zone">
-      <div class="center-top-row">
+      <div class="title-bar battle-title-bar">
         <div class="time-pill">
           <text class="time-text">{{ clockText }}</text>
           <image class="record-icon" src="{{ recordIcon }}"></image>
@@ -21,7 +24,7 @@
       </div>
 
       <div class="ratio-block">
-        <text class="ratio-label">{{ $t('battle.ratio') }}</text>
+        <text class="ratio-label">{{ $t("battle.ratio") }}</text>
         <text class="ratio-value">{{ ratioText }}</text>
       </div>
 
@@ -40,52 +43,36 @@
       <text class="side-count">{{ deathCount }}</text>
     </div>
 
-    <div class="action-overlay" if="{{ showUndoPanel }}" onclick="closeUndoPanel">
-      <div class="undo-actions">
-        <input
-          class="overlay-action overlay-kill"
-          type="button"
-          value="K"
-          onclick="decrementKill"
-        />
-        <div class="overlay-action overlay-undo" onclick="undoEvent">
-          <image class="overlay-undo-icon" src="/common/undo.png"></image>
-        </div>
-        <input
-          class="overlay-action overlay-death"
-          type="button"
-          value="D"
-          onclick="decrementDeath"
-        />
-      </div>
-    </div>
+    <action-overlay
+      if="{{ showUndoPanel }}"
+      actions="{{ undoOverlayActions }}"
+      vertical="{{ undoOverlayVertical }}"
+      actions-style="{{ undoOverlayStyle }}"
+      onkillminus="decrementKill"
+      onundo="undoEvent"
+      ondeathminus="decrementDeath"
+      onclose="closeUndoPanel"
+    ></action-overlay>
 
-    <div class="action-overlay" if="{{ showMorePanel }}" onclick="closeMorePanel">
-      <div class="more-actions">
-        <div class="icon-action" onclick="openHistory">
-          <image class="more-icon" src="/common/history.png"></image>
-        </div>
-        <div class="icon-action" onclick="openSettings">
-          <image class="more-icon" src="/common/settings.png"></image>
-        </div>
-      </div>
-    </div>
+    <action-overlay
+      if="{{ showMorePanel }}"
+      actions="{{ moreOverlayActions }}"
+      vertical="{{ moreOverlayVertical }}"
+      actions-style="{{ moreOverlayStyle }}"
+      onhistory="openHistory"
+      onsettings="openSettings"
+      onclose="closeMorePanel"
+    ></action-overlay>
 
-    <div class="confirm-overlay" if="{{ showConfirm }}">
-      <div class="confirm-dialog">
-        <text class="confirm-title">{{ $t(confirmTitleKey) }}</text>
-        <text class="confirm-message">{{ $t(confirmMessageKey) }}</text>
-        <div class="confirm-actions">
-          <input
-            class="confirm-button cancel-button"
-            type="button"
-            value="{{ $t('common.cancel') }}"
-            onclick="cancelConfirm"
-          />
-          <input class="confirm-button ok-button" type="button" value="{{ $t('common.confirm') }}" onclick="runConfirm" />
-        </div>
-      </div>
-    </div>
+    <confirm-dialog
+      if="{{ showConfirm }}"
+      title-text="{{ $t(confirmTitleKey) }}"
+      message-text="{{ $t(confirmMessageKey) }}"
+      cancel-text="{{ $t('common.cancel') }}"
+      ok-text="{{ $t('common.confirm') }}"
+      oncancel="cancelConfirm"
+      onconfirm="runConfirm"
+    ></confirm-dialog>
 
     <div class="aod-page" if="{{ aodActive }}" onclick="wakeFromAod">
       <text class="aod-date">{{ dateText }}</text>
@@ -126,6 +113,55 @@ export default {
     showUndoPanel: false,
     showMorePanel: false,
     showConfirm: false,
+    undoOverlayActions: [
+      {
+        eventName: "killminus",
+        actionClass: "overlay-action overlay-kill",
+        label: "K",
+        labelClass: "overlay-action-label",
+        icon: "",
+        iconClass: "overlay-action-icon"
+      },
+      {
+        eventName: "undo",
+        actionClass: "overlay-action overlay-undo",
+        label: "",
+        labelClass: "overlay-action-label",
+        icon: "/common/undo.png",
+        iconClass: "overlay-undo-icon"
+      },
+      {
+        eventName: "deathminus",
+        actionClass: "overlay-action overlay-death",
+        label: "D",
+        labelClass: "overlay-action-label",
+        icon: "",
+        iconClass: "overlay-action-icon"
+      }
+    ],
+    undoOverlayVertical: false,
+    // Undo 面板向下稍微偏移，实现双击主页 Undo 按钮快速撤回的效果
+    undoOverlayStyle: "bottom: 18px;",
+    moreOverlayActions: [
+      {
+        eventName: "history",
+        actionClass: "overlay-action overlay-icon-action",
+        label: "",
+        labelClass: "overlay-action-label",
+        icon: "/common/history.png",
+        iconClass: "overlay-action-icon"
+      },
+      {
+        eventName: "settings",
+        actionClass: "overlay-action overlay-icon-action",
+        label: "",
+        labelClass: "overlay-action-label",
+        icon: "/common/settings.png",
+        iconClass: "overlay-action-icon"
+      }
+    ],
+    moreOverlayVertical: true,
+    moreOverlayStyle: "right: 40px; bottom: 40px;",
     confirmTitleKey: "battle.stopTitle",
     confirmMessageKey: "battle.stopMessage",
     confirmAction: "",
@@ -616,602 +652,6 @@ export default {
 </script>
 
 <style>
-.battle-page {
-  width: 100%;
-  flex-direction: row;
-  flex: 1;
-}
-
-.zone {
-  width: 180px;
-  flex: 1;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-.kill-zone {
-  background-color: #ff1744;
-}
-
-.death-zone {
-  background-color: #2979ff;
-}
-
-.side-count {
-  font-size: 86px;
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 92px;
-  text-align: center;
-}
-
-.side-label {
-  margin-top: 10px;
-  font-size: 28px;
-  color: #ffffff;
-  text-align: center;
-}
-
-.center-zone {
-  width: 150px;
-  flex-direction: column;
-  align-items: center;
-  background-color: #555555;
-}
-
-.center-top-row {
-  width: 124px;
-  height: 36px;
-  margin-top: 22px;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.time-pill {
-  width: 70px;
-  height: 30px;
-  border-radius: 15px;
-  background-color: #ffffff;
-  color: #111111;
-  font-size: 18px;
-  text-align: center;
-  line-height: 30px;
-}
-
-.center-top-row {
-  width: 150px;
-  justify-content: center;
-  align-items: center;
-}
-
-.record-pill {
-  width: 48px;
-  height: 30px;
-  border-radius: 15px;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.record-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 4px;
-  background-color: #ffffff;
-}
-
-.recording-dot {
-  background-color: #ff1744;
-}
-
-.record-text {
-  margin-left: 4px;
-  font-size: 10px;
-  color: #ffffff;
-}
-
-.date-text {
-  /* width: 120px; */
-  margin-top: 8px;
-  font-size: 16px;
-  color: #f1f1f1;
-  text-align: center;
-}
-
-.duration-text {
-  width: 120px;
-  margin-top: 0px;
-  font-size: 24px;
-  font-weight: 700;
-  color: #ffffff;
-  text-align: center;
-}
-
-.ratio-block {
-  width: 120px;
-  margin-top: 52px;
-  flex-direction: column;
-  align-items: center;
-}
-
-.ratio-label {
-  font-size: 18px;
-  color: #d8d8d8;
-  text-align: center;
-}
-
-.ratio-value {
-  margin-top: 8px;
-  font-size: 34px;
-  font-weight: 700;
-  color: #ffffff;
-  text-align: center;
-}
-
-.undo-button {
-  width: 112px;
-  height: 52px;
-  margin-top: 18px;
-  border-radius: 26px;
-  background-color: #ffffff;
-  color: #111111;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.settings-button {
-  width: 88px;
-  height: 32px;
-  margin-top: 28px;
-  border-radius: 16px;
-  background-color: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
-  font-size: 16px;
-}
-
-.finish-button {
-  width: 112px;
-  height: 34px;
-  margin-top: 14px;
-  border-radius: 17px;
-  background-color: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
-  font-size: 14px;
-}
-
-.page-dots {
-  width: 52px;
-  height: 12px;
-  margin-top: 28px;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 4px;
-  background-color: rgba(255, 255, 255, 0.4);
-}
-
-.active-dot {
-  background-color: #ffffff;
-}
-
-.overlay-action {
-  width: 132px;
-  height: 132px;
-  margin-left: 8px;
-  margin-right: 8px;
-  border-radius: 66px;
-  font-size: 28px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.overlay-kill {
-  background-color: #ff1744;
-}
-
-.overlay-undo {
-  background-color: #333333;
-}
-
-.overlay-death {
-  background-color: #2979ff;
-}
-
-.aod-page {
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  right: 0px;
-  bottom: 0px;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background-color: #000000;
-}
-
-.aod-date {
-  font-size: 24px;
-  color: #8a8a8a;
-  text-align: center;
-}
-
-.aod-time {
-  margin-top: 8px;
-  font-size: 78px;
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 86px;
-  text-align: center;
-}
-
-.aod-label {
-  margin-top: 34px;
-  font-size: 20px;
-  color: #6f6f6f;
-  text-align: center;
-}
-
-.aod-ratio {
-  margin-top: 6px;
-  font-size: 72px;
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 80px;
-  text-align: center;
-}
-
-.aod-summary {
-  margin-top: 12px;
-  font-size: 26px;
-  color: #d8d8d8;
-  text-align: center;
-}
-
-.battle-page {
-  width: 100%;
-  flex: 1;
-}
-
-.zone {
-  flex: 1;
-  width: auto;
-}
-
-.side-count {
-  font-size: 128px;
-  line-height: 155px;
-}
-
-.center-zone {
-  width: 150px;
-}
-
-.time-pill {
-  width: 96px;
-  height: 30px;
-  border-radius: 10px;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  background-color: #999999;
-}
-
-.time-text {
-  width: 60px;
-  font-size: 20px;
-  font-weight: 800;
-  color: #ffffff;
-  text-align: center;
-}
-
-.record-icon {
-  width: 20px;
-  height: 20px;
-  margin-left: 4px;
-}
-
-.main-action {
-  width: 60px;
-  height: 60px;
-  margin-top: 36px;
-  border-radius: 10px;
-  justify-content: center;
-  align-items: center;
-}
-
-.start-action {
-  background-color: #67df79;
-}
-
-.stop-action {
-  background-color: #ff1744;
-}
-
-.main-action-icon {
-  width: 60px;
-  height: 60px;
-}
-
-.ratio-block {
-  margin-top: 10px;
-}
-
-.ratio-label {
-  font-size: 14px;
-  font-weight: 800;
-  text-transform: none;
-}
-
-.ratio-value {
-  font-size: 52px;
-  font-weight: 800;
-  line-height: 63px;
-}
-
-.icon-button {
-  justify-content: center;
-  align-items: center;
-}
-
-.undo-button {
-  width: 62px;
-  height: 56px;
-  margin-top: 10px;
-  border-radius: 10px;
-  background-color: #f5f5f5;
-}
-
-.undo-icon {
-  width: 50px;
-  height: 50px;
-}
-
-.more-button {
-  width: 65px;
-  height: 25px;
-  margin-top: 94px;
-  border-radius: 10px;
-  border-width: 1px;
-  border-color: #dbdbdb;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-}
-
-.dot {
-  width: 5px;
-  height: 5px;
-  margin-left: 5px;
-  margin-right: 5px;
-  border-radius: 5px;
-  background-color: #d9d9d9;
-}
-
-.action-overlay,
-.confirm-overlay {
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  right: 0px;
-  bottom: 0px;
-  justify-content: center;
-  align-items: center;
-}
-
-.action-overlay {
-  background-color: rgba(34, 34, 34, 0.75);
-}
-
-.undo-actions {
-  width: 384px;
-  height: 106px;
-  margin-top: 84px;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.overlay-action {
-  width: 95px;
-  height: 98px;
-  border-radius: 18px;
-  justify-content: center;
-  align-items: center;
-  background-color: #d9d9d9;
-  color: #000000;
-  font-size: 48px;
-  font-weight: 700;
-}
-
-.overlay-undo {
-  width: 114px;
-  height: 104px;
-}
-
-.overlay-undo-icon {
-  width: 74px;
-  height: 74px;
-}
-
-.more-actions {
-  width: 106px;
-  height: 252px;
-  margin-top: 160px;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.icon-action {
-  width: 106px;
-  height: 106px;
-  border-radius: 18px;
-  justify-content: center;
-  align-items: center;
-  background-color: #d9d9d9;
-}
-
-.more-icon {
-  width: 96px;
-  height: 96px;
-}
-
-.confirm-overlay {
-  background-color: rgba(0, 0, 0, 0.68);
-}
-
-.confirm-dialog {
-  width: 360px;
-  height: 210px;
-  padding-left: 20px;
-  padding-right: 20px;
-  border-radius: 28px;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background-color: #f5f5f5;
-}
-
-.confirm-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #111111;
-  text-align: center;
-}
-
-.confirm-message {
-  width: 300px;
-  margin-top: 12px;
-  font-size: 20px;
-  color: #333333;
-  text-align: center;
-}
-
-.confirm-actions {
-  width: 300px;
-  height: 46px;
-  margin-top: 24px;
-  flex-direction: row;
-  justify-content: space-between;
-}
-
-.confirm-button {
-  width: 136px;
-  height: 46px;
-  border-radius: 23px;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.cancel-button {
-  background-color: #dbdbdb;
-  color: #111111;
-}
-
-.ok-button {
-  background-color: #ff1744;
-  color: #ffffff;
-}
-
-.aod-page {
-  right: 0px;
-  bottom: 0px;
-}
-
-.aod-date {
-  font-size: 32px;
-  font-weight: 500;
-  color: #999999;
-}
-
-.aod-time {
-  margin-top: 0px;
-  font-size: 48px;
-  line-height: 58px;
-}
-
-.aod-label {
-  display: none;
-}
-
-.aod-ratio {
-  margin-top: 10px;
-  font-size: 96px;
-  font-weight: 800;
-  line-height: 116px;
-}
-
-.aod-summary {
-  margin-top: 0px;
-  font-size: 36px;
-  color: #f5f5f5;
-}
-
-.error-text {
-  width: 120px;
-  height: 20px;
-  margin-top: 4px;
-  font-size: 14px;
-  color: #ffb3b3;
-  text-align: center;
-}
-
-@media screen and (shape: circle) {
-  .battle-page {
-    padding-top: 18px;
-    padding-bottom: 18px;
-  }
-
-  .center-zone {
-    padding-top: 18px;
-    padding-bottom: 18px;
-  }
-
-  .center-top-row {
-    margin-top: 20px;
-  }
-
-  .side-count {
-    font-size: 96px;
-    line-height: 116px;
-  }
-
-  .date-text {
-    font-size: 14px;
-  }
-
-  .duration-text {
-    font-size: 20px;
-  }
-
-  .main-action {
-    margin-top: 24px;
-  }
-
-  .ratio-value {
-    font-size: 44px;
-    line-height: 54px;
-  }
-
-  .undo-button {
-    margin-top: 16px;
-  }
-
-  .more-button {
-    margin-top: 58px;
-  }
-
-  .confirm-dialog {
-    width: 320px;
-  }
-
-}
+@import "../../common/styles.css";
+@import "./index.css";
 </style>

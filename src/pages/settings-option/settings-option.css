@@ -1,0 +1,55 @@
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0px);
+  }
+}
+
+.settings-option-page {
+  width: 100%;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  animation-name: pageSlideIn;
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+  page-animation-name: pageSlideIn;
+}
+
+.menu-panel {
+  width: 100%;
+  margin-top: 8px;
+  flex-direction: column;
+  align-items: center;
+  background-color: transparent;
+}
+
+.menu-option {
+  width: 100%;
+  height: 84px;
+  margin-top: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.selected-option {
+}
+
+.menu-option-text {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+}
+
+@media screen and (shape: circle) {
+  .menu-panel {
+    padding-top: 22px;
+    padding-bottom: 80px;
+  }
+}

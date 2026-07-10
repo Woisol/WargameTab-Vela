@@ -1,13 +1,43 @@
 <template>
   <div class="confirm-overlay">
     <div class="confirm-dialog">
-      <slot></slot>
+      <text class="confirm-title">{{ titleText }}</text>
+      <text class="confirm-message">{{ messageText }}</text>
+      <div class="confirm-actions">
+        <input
+          class="confirm-button cancel-button"
+          type="button"
+          value="{{ cancelText }}"
+          onclick="cancel"
+        />
+        <input
+          class="confirm-button ok-button"
+          type="button"
+          value="{{ okText }}"
+          onclick="confirm"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-export default {}
+export default {
+  props: {
+    titleText: "",
+    messageText: "",
+    cancelText: "",
+    okText: ""
+  },
+
+  cancel() {
+    this.$emit("cancel")
+  },
+
+  confirm() {
+    this.$emit("confirm")
+  }
+}
 </script>
 
 <style>
@@ -32,6 +62,48 @@ export default {}
   justify-content: center;
   align-items: center;
   background-color: #f5f5f5;
+}
+
+.confirm-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111111;
+  text-align: center;
+}
+
+.confirm-message {
+  width: 300px;
+  margin-top: 12px;
+  font-size: 20px;
+  color: #333333;
+  text-align: center;
+}
+
+.confirm-actions {
+  width: 300px;
+  height: 46px;
+  margin-top: 24px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.confirm-button {
+  width: 136px;
+  height: 46px;
+  border-radius: 23px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.cancel-button {
+  /* width: 800px; */
+  background-color: #dbdbdb;
+  color: #111111;
+}
+
+.ok-button {
+  background-color: #ff1744;
+  color: #ffffff;
 }
 
 @media screen and (shape: circle) {

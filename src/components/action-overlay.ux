@@ -1,11 +1,49 @@
 <template>
-  <div class="action-overlay">
-    <slot></slot>
+  <div class="action-overlay" onclick="close">
+    <div class="overlay-actions overlay-actions-vertical" if="{{ vertical }}" style="{{ actionsStyle }}">
+      <div
+        class="{{ $item.actionClass }}"
+        for="{{ actions }}"
+        onclick="handleAction($item.eventName)"
+      >
+        <text class="{{ $item.labelClass }}" if="{{ $item.label }}">{{ $item.label }}</text>
+        <image class="{{ $item.iconClass }}" if="{{ $item.icon }}" src="{{ $item.icon }}"></image>
+      </div>
+    </div>
+
+    <div class="overlay-actions overlay-actions-horizontal" if="{{ !vertical }}" style="{{ actionsStyle }}">
+      <div
+        class="{{ $item.actionClass }}"
+        for="{{ actions }}"
+        onclick="handleAction($item.eventName)"
+      >
+        <text class="{{ $item.labelClass }}" if="{{ $item.label }}">{{ $item.label }}</text>
+        <image class="{{ $item.iconClass }}" if="{{ $item.icon }}" src="{{ $item.icon }}"></image>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-export default {}
+export default {
+  props: {
+    actions: [],
+    vertical: false,
+    actionsStyle: ""
+  },
+
+  handleAction(eventName) {
+    if (!eventName) {
+      return
+    }
+
+    this.$emit(eventName)
+  },
+
+  close() {
+    this.$emit("close")
+  }
+}
 </script>
 
 <style>
@@ -18,5 +56,64 @@ export default {}
   justify-content: center;
   align-items: center;
   background-color: rgba(34, 34, 34, 0.75);
+}
+
+.overlay-actions {
+  position: absolute;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.overlay-actions-horizontal {
+  width: 384px;
+  height: 106px;
+  flex-direction: row;
+}
+
+.overlay-actions-vertical {
+  width: 106px;
+  height: 252px;
+  flex-direction: column;
+}
+
+.overlay-action {
+  width: 95px;
+  height: 98px;
+  border-radius: 18px;
+  border-width: 1px;
+  border-color: #dbdbdb;
+  justify-content: center;
+  align-items: center;
+  background-color: #d9d9d9;
+  color: #000000;
+  font-size: 48px;
+  font-weight: 700;
+}
+
+.overlay-action-label {
+  color: #000000;
+  font-size: 48px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.overlay-undo {
+  width: 114px;
+  height: 104px;
+}
+
+.overlay-undo-icon {
+  width: 74px;
+  height: 74px;
+}
+
+.overlay-action-icon {
+  width: 74px;
+  height: 74px;
+}
+
+.overlay-icon-action {
+  width: 106px;
+  height: 106px;
 }
 </style>

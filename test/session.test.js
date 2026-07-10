@@ -8,6 +8,8 @@ const design = require("../src/common/design.js")
 const designConstants = require("../src/common/constants/design.js")
 const settingConstants = require("../src/common/constants/settings.js")
 const optionPage = require("../src/common/option-page.js")
+const historyPage = require("../src/common/history-page.js")
+const reviewPage = require("../src/common/review-page.js")
 
 function runTest(name, fn) {
   try {
@@ -331,32 +333,239 @@ runTest("settings pages use i18n text keys instead of hardcoded labels", () => {
   const optionUx = fs.readFileSync(path.join(__dirname, "../src/pages/settings-option/settings-option.ux"), "utf8")
   const zh = JSON.parse(fs.readFileSync(path.join(__dirname, "../src/i18n/zh-CN.json"), "utf8"))
   const en = JSON.parse(fs.readFileSync(path.join(__dirname, "../src/i18n/en.json"), "utf8"))
+  const defaults = JSON.parse(fs.readFileSync(path.join(__dirname, "../src/i18n/defaults.json"), "utf8"))
 
-  assert.ok(settingsUx.indexOf("$t('settings.title')") >= 0)
+  assert.ok(settingsUx.indexOf('title-text="{{ $t(\'settings.title\') }}"') >= 0)
+  assert.ok(optionUx.indexOf('title-text="{{ $t(menuTitleKey) }}"') >= 0)
   assert.ok(optionUx.indexOf("$t($item.labelKey)") >= 0)
   assert.equal(settingsUx.indexOf(">设置<"), -1)
   assert.equal(optionUx.indexOf("触发方式"), -1)
+  assert.equal(defaults.common.empty, "")
+  assert.equal(zh.common.empty, "")
+  assert.equal(en.common.empty, "")
   assert.equal(zh.settings.title, "设置")
   assert.equal(en.settings.title, "Settings")
 })
 
-runTest("watch pages avoid runtime-unstable slot components and use inline title bars", () => {
+runTest("watch pages use explicit custom components without slot wrappers", () => {
   var indexUx = fs.readFileSync(path.join(__dirname, "../src/pages/index/index.ux"), "utf8")
   var historyUx = fs.readFileSync(path.join(__dirname, "../src/pages/history/history.ux"), "utf8")
   var reviewUx = fs.readFileSync(path.join(__dirname, "../src/pages/review/review.ux"), "utf8")
   var settingsUx = fs.readFileSync(path.join(__dirname, "../src/pages/settings/settings.ux"), "utf8")
   var optionUx = fs.readFileSync(path.join(__dirname, "../src/pages/settings-option/settings-option.ux"), "utf8")
+  var titleBarUx = fs.readFileSync(path.join(__dirname, "../src/components/title-bar.ux"), "utf8")
+  var confirmDialogUx = fs.readFileSync(path.join(__dirname, "../src/components/confirm-dialog.ux"), "utf8")
+  var actionOverlayUx = fs.readFileSync(path.join(__dirname, "../src/components/action-overlay.ux"), "utf8")
+  var iconActionUx = fs.readFileSync(path.join(__dirname, "../src/components/icon-action.ux"), "utf8")
+  var commonCss = fs.readFileSync(path.join(__dirname, "../src/common/styles.css"), "utf8")
 
-  ;[indexUx, historyUx, reviewUx, settingsUx, optionUx].forEach((ux) => {
-    assert.equal(ux.indexOf("<import name="), -1)
+    ;[
+      indexUx,
+      historyUx,
+      reviewUx,
+      settingsUx,
+      optionUx,
+      titleBarUx,
+      confirmDialogUx,
+      actionOverlayUx,
+      iconActionUx
+    ].forEach((ux) => {
+      assert.equal(ux.indexOf("<slot"), -1)
+    })
+  assert.ok(indexUx.indexOf('<import src="../../components/action-overlay.ux" name="action-overlay"></import>') >= 0)
+  assert.ok(indexUx.indexOf('<import src="../../components/confirm-dialog.ux" name="confirm-dialog"></import>') >= 0)
+  assert.ok(indexUx.indexOf("<action-overlay") >= 0)
+  assert.ok(indexUx.indexOf("<confirm-dialog") >= 0)
+  assert.ok(historyUx.indexOf('<import src="../../components/title-bar.ux" name="title-bar"></import>') >= 0)
+  assert.ok(historyUx.indexOf('<import src="../../components/confirm-dialog.ux" name="confirm-dialog"></import>') >= 0)
+  assert.ok(historyUx.indexOf("<title-bar") >= 0)
+  assert.ok(historyUx.indexOf('title-text="{{ $t(\'history.title\') }}"') >= 0)
+  assert.ok(historyUx.indexOf("<confirm-dialog") >= 0)
+  assert.ok(historyUx.indexOf('title-text="{{ $t(\'history.deleteTitle\') }}"') >= 0)
+  assert.ok(historyUx.indexOf('message-text="{{ $t(\'history.deleteMessage\') }}"') >= 0)
+  assert.ok(historyUx.indexOf('cancel-text="{{ $t(\'common.cancel\') }}"') >= 0)
+  assert.ok(historyUx.indexOf('ok-text="{{ $t(\'common.delete\') }}"') >= 0)
+  assert.ok(reviewUx.indexOf("<title-bar") >= 0)
+  assert.ok(settingsUx.indexOf("<title-bar") >= 0)
+  assert.ok(optionUx.indexOf("<title-bar") >= 0)
+    ;[historyUx, reviewUx, settingsUx, optionUx].forEach((ux) => {
+      assert.ok(ux.indexOf("title-text=") >= 0)
+      assert.ok(ux.indexOf("right-text=") >= 0)
+      assert.equal(ux.indexOf("title-bar-host"), -1)
+      assert.equal(ux.indexOf("title-key="), -1)
+      assert.equal(ux.indexOf("right-key="), -1)
+      assert.equal(ux.indexOf("title-prefix="), -1)
+      assert.equal(ux.indexOf("title-class="), -1)
+      assert.equal(ux.indexOf("right-class="), -1)
+      assert.equal(ux.indexOf("right-style="), -1)
+    })
+  assert.ok(titleBarUx.indexOf("props:") >= 0)
+  assert.ok(titleBarUx.indexOf("titleText") >= 0)
+  assert.ok(titleBarUx.indexOf('class="title-text"') >= 0)
+  assert.ok(titleBarUx.indexOf('class="title-right-text"') >= 0)
+  assert.ok(confirmDialogUx.indexOf("titleText") >= 0)
+  assert.ok(confirmDialogUx.indexOf("messageText") >= 0)
+  assert.ok(confirmDialogUx.indexOf("cancelText") >= 0)
+  assert.ok(confirmDialogUx.indexOf("okText") >= 0)
+  assert.equal(titleBarUx.indexOf("$t("), -1)
+  assert.equal(titleBarUx.indexOf('class="{{'), -1)
+  assert.equal(titleBarUx.indexOf('style="{{'), -1)
+  assert.equal(confirmDialogUx.indexOf("$t("), -1)
+  assert.equal(titleBarUx.indexOf("titleKey"), -1)
+  assert.equal(confirmDialogUx.indexOf("titleKey"), -1)
+  assert.equal(confirmDialogUx.indexOf("messageKey"), -1)
+  assert.equal(commonCss.indexOf(".title-bar-host"), -1)
+  assert.ok(titleBarUx.indexOf("flex-direction: row;") >= 0)
+  assert.equal(titleBarUx.indexOf("position: absolute;"), -1)
+  assert.ok(confirmDialogUx.indexOf('this.$emit("confirm")') >= 0)
+})
+
+runTest("action overlay stays single-layer and receives actions from the page", () => {
+  const indexUx = fs.readFileSync(path.join(__dirname, "../src/pages/index/index.ux"), "utf8")
+  const actionOverlayUx = fs.readFileSync(path.join(__dirname, "../src/components/action-overlay.ux"), "utf8")
+
+  assert.equal(actionOverlayUx.indexOf("<import"), -1)
+  assert.equal(actionOverlayUx.indexOf("<icon-action"), -1)
+  assert.ok(actionOverlayUx.indexOf("actions: []") >= 0)
+  assert.ok(actionOverlayUx.indexOf('for="{{ actions }}"') >= 0)
+  assert.ok(actionOverlayUx.indexOf('this.$emit(eventName)') >= 0)
+  assert.ok(actionOverlayUx.indexOf('onclick="close"') >= 0)
+  assert.ok(actionOverlayUx.indexOf('this.$emit("close")') >= 0)
+  assert.ok(indexUx.indexOf('actions="{{ undoOverlayActions }}"') >= 0)
+  assert.ok(indexUx.indexOf('actions="{{ moreOverlayActions }}"') >= 0)
+  assert.ok(indexUx.indexOf('onclose="closeUndoPanel"') >= 0)
+  assert.ok(indexUx.indexOf('onclose="closeMorePanel"') >= 0)
+})
+
+runTest("action overlay layout and offset are configured by page props", () => {
+  const indexUx = fs.readFileSync(path.join(__dirname, "../src/pages/index/index.ux"), "utf8")
+  const actionOverlayUx = fs.readFileSync(path.join(__dirname, "../src/components/action-overlay.ux"), "utf8")
+
+  assert.equal(actionOverlayUx.indexOf("actionsClass"), -1)
+  assert.ok(actionOverlayUx.indexOf("vertical: false") >= 0)
+  assert.ok(actionOverlayUx.indexOf('if="{{ vertical }}"') >= 0)
+  assert.ok(actionOverlayUx.indexOf('if="{{ !vertical }}"') >= 0)
+  assert.ok(actionOverlayUx.indexOf("actionsStyle") >= 0)
+  assert.equal(indexUx.indexOf("undoOverlayClass"), -1)
+  assert.equal(indexUx.indexOf("moreOverlayClass"), -1)
+  assert.ok(indexUx.indexOf('vertical="{{ undoOverlayVertical }}"') >= 0)
+  assert.ok(indexUx.indexOf('vertical="{{ moreOverlayVertical }}"') >= 0)
+  assert.ok(indexUx.indexOf("undoOverlayVertical: false") >= 0)
+  assert.ok(indexUx.indexOf("moreOverlayVertical: true") >= 0)
+  assert.ok(indexUx.indexOf('actions-style="{{ undoOverlayStyle }}"') >= 0)
+  assert.ok(indexUx.indexOf('actions-style="{{ moreOverlayStyle }}"') >= 0)
+  assert.ok(actionOverlayUx.indexOf("overlay-actions-horizontal") >= 0)
+  assert.ok(actionOverlayUx.indexOf("overlay-actions-vertical") >= 0)
+})
+
+runTest("icon action keeps visible border and restrained icon size", () => {
+  const iconActionUx = fs.readFileSync(path.join(__dirname, "../src/components/icon-action.ux"), "utf8")
+
+  assert.ok(iconActionUx.indexOf("border-width: 1px;") >= 0)
+  assert.ok(iconActionUx.indexOf("border-color: #dbdbdb;") >= 0)
+  assert.ok(iconActionUx.indexOf("width: 74px;") >= 0)
+  assert.ok(iconActionUx.indexOf("height: 74px;") >= 0)
+})
+
+runTest("watch page styles are split out of large ux pages", () => {
+  const pagePaths = [
+    "../src/pages/index/index.ux",
+    "../src/pages/history/history.ux",
+    "../src/pages/review/review.ux",
+    "../src/pages/settings/settings.ux",
+    "../src/pages/settings-option/settings-option.ux"
+  ]
+
+  pagePaths.forEach((pagePath) => {
+    const ux = fs.readFileSync(path.join(__dirname, pagePath), "utf8")
+    const styleMatch = ux.match(/<style>([\s\S]*)<\/style>/)
+
+    assert.ok(styleMatch)
+    assert.ok(styleMatch[1].indexOf('@import "../../common/styles.css";') >= 0)
+    assert.ok(styleMatch[1].indexOf('@import "./') >= 0)
+    assert.equal(/\.[a-zA-Z0-9_-]+\s*\{/.test(styleMatch[1]), false)
+  })
+})
+
+runTest("runtime-unstable slot component wrappers are not kept in components", () => {
+  const componentDir = path.join(__dirname, "../src/components")
+  const componentFiles = fs.existsSync(componentDir)
+    ? fs.readdirSync(componentDir).filter((file) => file.endsWith(".ux"))
+    : []
+
+  componentFiles.forEach((file) => {
+    const ux = fs.readFileSync(path.join(componentDir, file), "utf8")
     assert.equal(ux.indexOf("<slot"), -1)
   })
-  assert.ok(historyUx.indexOf('<div class="title-bar">') >= 0)
-  assert.ok(reviewUx.indexOf('<div class="title-bar">') >= 0)
-  assert.ok(settingsUx.indexOf('<div class="title-bar">') >= 0)
-  assert.ok(optionUx.indexOf('<div class="title-bar">') >= 0)
-  assert.ok(indexUx.indexOf('<div class="confirm-dialog">') >= 0)
-  assert.ok(historyUx.indexOf('<div class="confirm-dialog">') >= 0)
+})
+
+runTest("history page helper builds row display models", () => {
+  const items = historyPage.createHistoryItems(
+    [
+      {
+        sessionId: "a",
+        startTime: Date.UTC(2026, 6, 9),
+        status: "synced",
+        summary: { kills: 4, deaths: 2 }
+      },
+      {
+        sessionId: "b",
+        startTime: Date.UTC(2026, 6, 10),
+        status: "finished",
+        summary: { kills: 3, deaths: 0 }
+      }
+    ],
+    "b"
+  )
+
+  assert.deepEqual(
+    items.map((item) => ({
+      sessionId: item.sessionId,
+      dateText: item.dateText,
+      statusKey: item.statusKey,
+      ratioText: item.ratioText,
+      deleteVisible: item.deleteVisible,
+      itemContentClass: item.itemContentClass
+    })),
+    [
+      {
+        sessionId: "a",
+        dateText: "2026-07-09",
+        statusKey: "history.synced",
+        ratioText: "2.00",
+        deleteVisible: false,
+        itemContentClass: "item-content"
+      },
+      {
+        sessionId: "b",
+        dateText: "2026-07-10",
+        statusKey: "history.unsynced",
+        ratioText: "3.00",
+        deleteVisible: true,
+        itemContentClass: "item-content item-content-open"
+      }
+    ]
+  )
+})
+
+runTest("review page helper builds session display model", () => {
+  const model = reviewPage.createReviewModel({
+    sessionId: "s1",
+    startTime: new Date(2026, 6, 9, 12, 0, 0).getTime(),
+    endTime: new Date(2026, 6, 9, 12, 2, 5).getTime(),
+    status: "finished",
+    summary: { kills: 5, deaths: 2 },
+    events: [{ type: "kill", time: 30 }]
+  })
+
+  assert.equal(model.hasSession, true)
+  assert.equal(model.titleDateText, "2026-07-09 ")
+  assert.equal(model.ratioText, "2.50")
+  assert.equal(model.syncKey, "review.unsyncedRetry")
+  assert.equal(model.rangeText, "12:00:00 - 12:02:05")
+  assert.equal(model.durationMinutes, 2)
+  assert.equal(model.durationSeconds, 5)
+  assert.equal(model.timelineItems.length, 1)
 })
 
 runTest("review uses the provided ratio triangle image asset", () => {
@@ -381,9 +590,10 @@ runTest("review timeline renders axis line and scrollable full event list", () =
 
 runTest("history only renders delete action when the row is revealed", () => {
   const historyUx = fs.readFileSync(path.join(__dirname, "../src/pages/history/history.ux"), "utf8")
+  const historyHelper = fs.readFileSync(path.join(__dirname, "../src/common/history-page.js"), "utf8")
 
   assert.ok(historyUx.indexOf('if="{{ $item.deleteVisible }}"') >= 0)
-  assert.ok(historyUx.indexOf("deleteVisible:") >= 0)
+  assert.ok(historyHelper.indexOf("deleteVisible:") >= 0)
 })
 
 runTest("defaultSettings provides battle interaction defaults", () => {
