@@ -94,6 +94,7 @@ function padTime(value) {
   return value < 10 ? "0" + value : String(value)
 }
 
+// TODO 移到通用 utils
 function formatDuration(ms) {
   var totalSeconds = Math.max(0, Math.floor(ms / 1000))
   var seconds = totalSeconds % 60

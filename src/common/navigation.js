@@ -8,6 +8,7 @@ function getTouchPoint(event) {
   }
 }
 
+// TODO 用 Left / Right 更通用……
 function isBackSwipe(startX, endX, startY, endY) {
   var deltaX = endX - startX
   var deltaY = Math.abs(endY - startY)

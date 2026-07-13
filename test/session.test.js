@@ -10,6 +10,7 @@ const settingConstants = require("../src/common/constants/settings.js")
 const optionPage = require("../src/common/option-page.js")
 const historyPage = require("../src/common/history-page.js")
 const reviewPage = require("../src/common/review-page.js")
+const sync = require("../src/common/sync.js")
 
 function runTest(name, fn) {
   try {
@@ -195,7 +196,7 @@ runTest("createReviewTimelineItems maps events to horizontal review markers", ()
       markerClass: "timeline-marker kill-marker",
       eventDotClass: "event-dot kill-marker",
       offsetPercent: 25,
-      markerStyle: "left: 119px;",
+      markerStyle: "left: 86px;",
       timeText: "0:30",
       typeText: "K"
     },
@@ -203,7 +204,7 @@ runTest("createReviewTimelineItems maps events to horizontal review markers", ()
       markerClass: "timeline-marker death-marker",
       eventDotClass: "event-dot death-marker",
       offsetPercent: 75,
-      markerStyle: "left: 356px;",
+      markerStyle: "left: 259px;",
       timeText: "1:30",
       typeText: "D"
     },
@@ -211,7 +212,7 @@ runTest("createReviewTimelineItems maps events to horizontal review markers", ()
       markerClass: "timeline-marker kill-marker",
       eventDotClass: "event-dot kill-marker",
       offsetPercent: 100,
-      markerStyle: "left: 475px;",
+      markerStyle: "left: 345px;",
       timeText: "2:00",
       typeText: "K"
     }
@@ -221,16 +222,16 @@ runTest("createReviewTimelineItems maps events to horizontal review markers", ()
 runTest("createReviewTimelineAxis renders labels from actual duration", () => {
   assert.deepEqual(session.createReviewTimelineAxis(130), [
     { label: "0:00", style: "left: 0px;" },
-    { label: "1:00", style: "left: 179px;" },
-    { label: "2:00", style: "left: 394px;" }
+    { label: "1:00", style: "left: 119px;" },
+    { label: "2:00", style: "left: 264px;" }
   ])
 
   assert.deepEqual(session.createReviewTimelineAxis(1210), [
     { label: "0:00", style: "left: 0px;" },
-    { label: "5:00", style: "left: 76px;" },
-    { label: "10:00", style: "left: 195px;" },
-    { label: "15:00", style: "left: 314px;" },
-    { label: "20:00", style: "left: 394px;" }
+    { label: "5:00", style: "left: 44px;" },
+    { label: "10:00", style: "left: 131px;" },
+    { label: "15:00", style: "left: 217px;" },
+    { label: "20:00", style: "left: 264px;" }
   ])
 })
 
@@ -664,4 +665,379 @@ runTest("createDisplaySummary returns live values for an ongoing session", () =>
     aodSummaryText: "K 1 / D 1",
     running: true
   })
+})
+
+runTest("sync export includes only unsynced finished sessions", () => {
+  const history = [
+    {
+      sessionId: "finished_unsynced",
+      startTime: 3000,
+      endTime: 4000,
+      status: "finished",
+      summary: { kills: 2, deaths: 1 },
+      events: [{ eventId: "event_a", type: "kill", time: 5 }]
+    },
+    {
+      sessionId: "already_synced",
+      startTime: 2000,
+      endTime: 3000,
+      status: "synced",
+      summary: { kills: 1, deaths: 1 },
+      events: []
+    },
+    {
+      sessionId: "still_running",
+      startTime: 1000,
+      endTime: 0,
+      status: "ongoing",
+      summary: { kills: 4, deaths: 0 },
+      events: []
+    }
+  ]
+
+  const payload = sync.createSyncExport(history, {
+    deviceId: "watch_a",
+    lastSyncAt: 123
+  })
+
+  assert.equal(payload.protocolVersion, 1)
+  assert.equal(payload.deviceId, "watch_a")
+  assert.equal(payload.lastSyncAt, 123)
+  assert.deepEqual(
+    payload.sessions.map((item) => item.sessionId),
+    ["finished_unsynced"]
+  )
+})
+
+runTest("sync push message includes protocol metadata and unsynced finished sessions", () => {
+  const history = [
+    {
+      sessionId: "old_finished",
+      startTime: 1000,
+      endTime: 2000,
+      status: "finished",
+      summary: { kills: 1, deaths: 0 },
+      events: [{ eventId: "event_old", type: "kill", time: 5 }]
+    },
+    {
+      sessionId: "already_synced",
+      startTime: 3000,
+      endTime: 4000,
+      status: "synced",
+      summary: { kills: 2, deaths: 1 },
+      events: []
+    },
+    {
+      sessionId: "still_running",
+      startTime: 4000,
+      endTime: 0,
+      status: "ongoing",
+      summary: { kills: 3, deaths: 0 },
+      events: []
+    },
+    {
+      sessionId: "new_finished",
+      startTime: 5000,
+      endTime: 6000,
+      status: "finished",
+      summary: { kills: 4, deaths: 2 },
+      events: [{ eventId: "event_new", type: "death", time: 10 }]
+    }
+  ]
+
+  const payload = sync.createSyncPushMessage(history, {
+    messageId: "sync_fixed",
+    deviceId: "watch_a",
+    createdAt: 1780000000000
+  })
+
+  assert.equal(payload.type, "wargame.sessions.push")
+  assert.equal(payload.protocolVersion, 1)
+  assert.equal(payload.messageId, "sync_fixed")
+  assert.equal(payload.deviceId, "watch_a")
+  assert.equal(payload.createdAt, 1780000000000)
+  assert.deepEqual(
+    payload.sessions.map((item) => item.sessionId),
+    ["new_finished", "old_finished"]
+  )
+})
+
+runTest("parse sync ack accepts valid protocol ack and filters invalid session ids", () => {
+  const result = sync.parseSyncAck(JSON.stringify({
+    type: "wargame.sessions.ack",
+    protocolVersion: 1,
+    ackMessageId: "sync_fixed",
+    sessionIds: ["a", "", 42, "b", null]
+  }))
+
+  assert.deepEqual(result, {
+    ackMessageId: "sync_fixed",
+    sessionIds: ["a", "b"]
+  })
+})
+
+runTest("parse sync ack returns null for invalid ack payloads", () => {
+  assert.equal(sync.parseSyncAck("{"), null)
+  assert.equal(sync.parseSyncAck(JSON.stringify({
+    type: "wargame.sessions.push",
+    protocolVersion: 1,
+    ackMessageId: "sync_fixed",
+    sessionIds: ["a"]
+  })), null)
+  assert.equal(sync.parseSyncAck(JSON.stringify({
+    type: "wargame.sessions.ack",
+    protocolVersion: 2,
+    ackMessageId: "sync_fixed",
+    sessionIds: ["a"]
+  })), null)
+  assert.equal(sync.parseSyncAck(JSON.stringify({
+    type: "wargame.sessions.ack",
+    protocolVersion: 1,
+    ackMessageId: "sync_fixed",
+    sessionIds: ["", 42, null]
+  })), null)
+})
+
+runTest("sync ack marks only acknowledged sessions as synced", () => {
+  const history = [
+    {
+      sessionId: "a",
+      startTime: 3000,
+      endTime: 4000,
+      status: "finished",
+      summary: { kills: 2, deaths: 1 },
+      events: []
+    },
+    {
+      sessionId: "b",
+      startTime: 2000,
+      endTime: 3000,
+      status: "finished",
+      summary: { kills: 1, deaths: 1 },
+      events: []
+    }
+  ]
+
+  const nextHistory = sync.applySyncAck(history, ["b", "missing"])
+
+  assert.deepEqual(
+    nextHistory.map((item) => ({ sessionId: item.sessionId, status: item.status })),
+    [
+      { sessionId: "a", status: "finished" },
+      { sessionId: "b", status: "synced" }
+    ]
+  )
+  assert.equal(history[1].status, "finished")
+})
+
+runTest("interconnect runtime wires Vela channel storage and sync helpers", () => {
+  const runtime = fs.readFileSync(path.join(__dirname, "../src/common/interconnect-sync.js"), "utf8")
+
+  assert.ok(runtime.indexOf('require("@system.interconnect")') >= 0)
+  assert.ok(runtime.indexOf('require("@system.storage")') >= 0)
+  assert.ok(runtime.indexOf('require("./sync.js")') >= 0)
+  assert.ok(runtime.indexOf("onopen") >= 0)
+  assert.ok(runtime.indexOf("onmessage") >= 0)
+  assert.ok(runtime.indexOf("onclose") >= 0)
+  assert.ok(runtime.indexOf("onerror") >= 0)
+  assert.ok(runtime.indexOf("createSyncPushMessage") >= 0)
+  assert.ok(runtime.indexOf("applySyncAck") >= 0)
+  assert.ok(runtime.indexOf("wargame_history") >= 0)
+  assert.ok(runtime.indexOf("JSON.stringify") >= 0)
+  assert.ok(runtime.indexOf("send") >= 0)
+  assert.ok(runtime.indexOf("start: start") >= 0)
+  assert.ok(runtime.indexOf("stop: stop") >= 0)
+  assert.ok(runtime.indexOf("requestSync: requestSync") >= 0)
+})
+
+runTest("interconnect runtime keeps function handler APIs reusable across stop and restart", () => {
+  const interconnectSync = require("../src/common/interconnect-sync.js")
+  const registered = {
+    open: [],
+    message: []
+  }
+  const connection = {
+    onopen: function (handler) {
+      registered.open.push(handler)
+    },
+    onmessage: function (handler) {
+      registered.message.push(handler)
+    },
+    onclose: function () {},
+    onerror: function () {},
+    getReadyState: function () {
+      return 1
+    },
+    send: function () {}
+  }
+  const runtime = interconnectSync._createRuntime({
+    interconnect: {
+      instance: function () {
+        return connection
+      }
+    },
+    storage: {
+      get: function (options) {
+        options.success({ value: "[]" })
+      },
+      set: function () {}
+    }
+  })
+
+  runtime.start()
+  runtime.stop()
+  runtime.start()
+
+  assert.equal(typeof connection.onopen, "function")
+  assert.equal(typeof connection.onmessage, "function")
+  assert.equal(registered.open.length, 2)
+  assert.equal(registered.message.length, 2)
+})
+
+runTest("interconnect runtime waits for ready open channel before sending sync", () => {
+  const interconnectSync = require("../src/common/interconnect-sync.js")
+  const sent = []
+  const registered = {}
+  var readyState = 0
+  const history = [
+    {
+      sessionId: "pending",
+      startTime: 3000,
+      endTime: 4000,
+      status: "finished",
+      summary: { kills: 2, deaths: 1 },
+      events: []
+    }
+  ]
+  const connection = {
+    onopen: function (handler) {
+      registered.open = handler
+    },
+    onmessage: function (handler) {
+      registered.message = handler
+    },
+    onclose: function () {},
+    onerror: function () {},
+    getReadyState: function () {
+      return readyState
+    },
+    send: function (raw) {
+      sent.push(JSON.parse(raw))
+    }
+  }
+  const runtime = interconnectSync._createRuntime({
+    interconnect: {
+      instance: function () {
+        return connection
+      }
+    },
+    storage: {
+      get: function (options) {
+        options.success({ value: JSON.stringify(history) })
+      },
+      set: function () {}
+    }
+  })
+
+  runtime.start()
+  runtime.requestSync()
+  readyState = 1
+  registered.open()
+
+  assert.equal(sent.length, 1)
+  assert.equal(sent[0].type, "wargame.sessions.push")
+  assert.deepEqual(
+    sent[0].sessions.map((item) => item.sessionId),
+    ["pending"]
+  )
+})
+
+runTest("interconnect runtime applies ack only when ackMessageId matches pending send", () => {
+  const interconnectSync = require("../src/common/interconnect-sync.js")
+  const written = []
+  const registered = {}
+  const history = [
+    {
+      sessionId: "ack_target",
+      startTime: 3000,
+      endTime: 4000,
+      status: "finished",
+      summary: { kills: 2, deaths: 1 },
+      events: []
+    }
+  ]
+  const connection = {
+    onopen: function (handler) {
+      registered.open = handler
+    },
+    onmessage: function (handler) {
+      registered.message = handler
+    },
+    onclose: function () {},
+    onerror: function () {},
+    getReadyState: function () {
+      return 1
+    },
+    send: function () {}
+  }
+  const runtime = interconnectSync._createRuntime({
+    interconnect: {
+      instance: function () {
+        return connection
+      }
+    },
+    storage: {
+      get: function (options) {
+        options.success({ value: JSON.stringify(history) })
+      },
+      set: function (options) {
+        written.push(JSON.parse(options.value))
+      }
+    },
+    now: function () {
+      return 1780000000000
+    }
+  })
+
+  runtime.start()
+  registered.open()
+  registered.message(JSON.stringify({
+    type: "wargame.sessions.ack",
+    protocolVersion: 1,
+    ackMessageId: "sync_wrong",
+    sessionIds: ["ack_target"]
+  }))
+  registered.message(JSON.stringify({
+    type: "wargame.sessions.ack",
+    protocolVersion: 1,
+    ackMessageId: "sync_1780000000000",
+    sessionIds: ["ack_target"]
+  }))
+
+  assert.equal(written.length, 1)
+  assert.deepEqual(
+    written[0].map((item) => ({ sessionId: item.sessionId, status: item.status })),
+    [{ sessionId: "ack_target", status: "synced" }]
+  )
+})
+
+runTest("app lifecycle starts and stops interconnect sync runtime", () => {
+  const appUx = fs.readFileSync(path.join(__dirname, "../src/app.ux"), "utf8")
+
+  assert.ok(appUx.indexOf('require("./common/interconnect-sync.js")') >= 0)
+  assert.ok(appUx.indexOf("interconnectSync.start()") >= 0)
+  assert.ok(appUx.indexOf("interconnectSync.stop()") >= 0)
+})
+
+runTest("battle page requests interconnect sync after history save succeeds", () => {
+  const indexUx = fs.readFileSync(path.join(__dirname, "../src/pages/index/index.ux"), "utf8")
+  const requireIndex = indexUx.indexOf('require("../../common/interconnect-sync.js")')
+  const saveSuccessIndex = indexUx.indexOf('self.errorKey = ""')
+  const requestIndex = indexUx.indexOf("interconnectSync.requestSync()")
+  const clearCurrentIndex = indexUx.indexOf("self.currentSession = null")
+
+  assert.ok(requireIndex >= 0)
+  assert.ok(saveSuccessIndex >= 0)
+  assert.ok(requestIndex > saveSuccessIndex)
+  assert.ok(requestIndex < clearCurrentIndex)
 })
