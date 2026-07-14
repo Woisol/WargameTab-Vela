@@ -55,6 +55,10 @@
       "aod": {
         "title": "AOD",
         "desc": "闲置后显示低亮战绩"
+      },
+      "interconnectDebug": {
+        "title": "互联调试",
+        "desc": "显示同步 Toast 并记录诊断日志"
       }
     },
     "options": {

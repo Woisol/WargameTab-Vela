@@ -55,6 +55,10 @@
       "aod": {
         "title": "AOD",
         "desc": "Dim stats while idle"
+      },
+      "interconnectDebug": {
+        "title": "Interconnect debug",
+        "desc": "Show sync toasts and diagnostic logs"
       }
     },
     "options": {

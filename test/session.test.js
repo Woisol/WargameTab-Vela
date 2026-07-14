@@ -10,7 +10,7 @@ const settingConstants = require("../src/common/constants/settings.js")
 const optionPage = require("../src/common/option-page.js")
 const historyPage = require("../src/common/history-page.js")
 const reviewPage = require("../src/common/review-page.js")
-const sync = require("../src/common/sync.js")
+const sync = require("../src/common/session-sync-protocol.js")
 
 function runTest(name, fn) {
   try {
@@ -309,7 +309,8 @@ runTest("option page definitions own settings storage and update callbacks", () 
     killVibration: "off",
     deathVibration: "long",
     aodEnabled: false,
-    visualMode: "simple"
+    visualMode: "simple",
+    interconnectDebugEnabled: false
   })
 })
 
@@ -603,7 +604,8 @@ runTest("defaultSettings provides battle interaction defaults", () => {
     killVibration: "short",
     deathVibration: "long",
     aodEnabled: false,
-    visualMode: "simple"
+    visualMode: "simple",
+    interconnectDebugEnabled: false
   })
 })
 
@@ -614,14 +616,16 @@ runTest("normalizeSettings keeps valid choices and replaces invalid ones with de
       killVibration: "double",
       deathVibration: "off",
       aodEnabled: true,
-      visualMode: "detailed"
+      visualMode: "detailed",
+      interconnectDebugEnabled: true
     }),
     {
       triggerMode: "click",
       killVibration: "double",
       deathVibration: "off",
       aodEnabled: true,
-      visualMode: "detailed"
+      visualMode: "detailed",
+      interconnectDebugEnabled: true
     }
   )
 
@@ -831,12 +835,13 @@ runTest("sync ack marks only acknowledged sessions as synced", () => {
 })
 
 runTest("interconnect runtime wires Vela channel storage and sync helpers", () => {
-  const runtime = fs.readFileSync(path.join(__dirname, "../src/common/interconnect-sync.js"), "utf8")
+  const runtime = fs.readFileSync(path.join(__dirname, "../src/common/interconnect-session-sync.js"), "utf8")
 
   assert.ok(runtime.indexOf('require("@system.interconnect")') >= 0)
   assert.ok(runtime.indexOf('require("@system.storage")') >= 0)
-  assert.ok(runtime.indexOf('require("./sync.js")') >= 0)
+  assert.ok(runtime.indexOf('require("./session-sync-protocol.js")') >= 0)
   assert.ok(runtime.indexOf("onopen") >= 0)
+  assert.ok(runtime.indexOf("onOpen") >= 0)
   assert.ok(runtime.indexOf("onmessage") >= 0)
   assert.ok(runtime.indexOf("onclose") >= 0)
   assert.ok(runtime.indexOf("onerror") >= 0)
@@ -850,8 +855,105 @@ runTest("interconnect runtime wires Vela channel storage and sync helpers", () =
   assert.ok(runtime.indexOf("requestSync: requestSync") >= 0)
 })
 
+runTest("interconnect runtime shows debug toasts only when the setting is enabled", () => {
+  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const toastMessages = []
+  const connection = {
+    onopen: function () {},
+    onmessage: function () {},
+    onclose: function () {},
+    onerror: function () {},
+    getReadyState: function () {
+      return 0
+    },
+    send: function () {}
+  }
+  const runtime = interconnectSync._createRuntime({
+    interconnect: {
+      instance: function () {
+        return connection
+      }
+    },
+    prompt: {
+      showToast: function (options) {
+        toastMessages.push(options.message)
+      }
+    },
+    storage: {
+      get: function (options) {
+        if (options.key === "wargame_settings") {
+          options.success({ value: JSON.stringify({ interconnectDebugEnabled: true }) })
+          return
+        }
+
+        options.success({ value: "[]" })
+      },
+      set: function () {}
+    }
+  })
+
+  runtime.start()
+
+  assert.ok(toastMessages.length > 0)
+})
+
+runTest("interconnect runtime reports official send failure details", () => {
+  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const toastMessages = []
+  const history = [
+    {
+      sessionId: "send_failure",
+      startTime: 3000,
+      endTime: 4000,
+      status: "finished",
+      summary: { kills: 2, deaths: 1 },
+      events: []
+    }
+  ]
+  const connection = {
+    onopen: function () {},
+    onmessage: function () {},
+    onclose: function () {},
+    onerror: function () {},
+    getReadyState: function (options) {
+      options.success({ status: 1 })
+    },
+    send: function (options) {
+      options.fail({ data: "timeout" }, 204)
+    }
+  }
+  const runtime = interconnectSync._createRuntime({
+    interconnect: {
+      instance: function () {
+        return connection
+      }
+    },
+    prompt: {
+      showToast: function (options) {
+        toastMessages.push(options.message)
+      }
+    },
+    storage: {
+      get: function (options) {
+        if (options.key === "wargame_settings") {
+          options.success({ value: JSON.stringify({ interconnectDebugEnabled: true }) })
+          return
+        }
+
+        options.success({ value: JSON.stringify(history) })
+      },
+      set: function () {}
+    }
+  })
+
+  runtime.start()
+
+  assert.ok(toastMessages.some((message) => message.indexOf("timeout") >= 0))
+  assert.ok(toastMessages.some((message) => message.indexOf("code=204") >= 0))
+})
+
 runTest("interconnect runtime keeps function handler APIs reusable across stop and restart", () => {
-  const interconnectSync = require("../src/common/interconnect-sync.js")
+  const interconnectSync = require("../src/common/interconnect-session-sync.js")
   const registered = {
     open: [],
     message: []
@@ -895,7 +997,7 @@ runTest("interconnect runtime keeps function handler APIs reusable across stop a
 })
 
 runTest("interconnect runtime waits for ready open channel before sending sync", () => {
-  const interconnectSync = require("../src/common/interconnect-sync.js")
+  const interconnectSync = require("../src/common/interconnect-session-sync.js")
   const sent = []
   const registered = {}
   var readyState = 0
@@ -921,8 +1023,11 @@ runTest("interconnect runtime waits for ready open channel before sending sync",
     getReadyState: function () {
       return readyState
     },
-    send: function (raw) {
-      sent.push(JSON.parse(raw))
+    send: function (options) {
+      sent.push(options.data)
+      if (options.success) {
+        options.success()
+      }
     }
   }
   const runtime = interconnectSync._createRuntime({
@@ -952,8 +1057,60 @@ runTest("interconnect runtime waits for ready open channel before sending sync",
   )
 })
 
+runTest("interconnect runtime sends when the channel is already ready at startup", () => {
+  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const sent = []
+  const history = [
+    {
+      sessionId: "already_ready",
+      startTime: 3000,
+      endTime: 4000,
+      status: "finished",
+      summary: { kills: 2, deaths: 1 },
+      events: []
+    }
+  ]
+  const connection = {
+    onopen: function () {},
+    onmessage: function () {},
+    onclose: function () {},
+    onerror: function () {},
+    getReadyState: function () {
+      return 1
+    },
+    send: function (options) {
+      sent.push(options.data)
+      if (options.success) {
+        options.success()
+      }
+    }
+  }
+  const runtime = interconnectSync._createRuntime({
+    interconnect: {
+      instance: function () {
+        return connection
+      }
+    },
+    storage: {
+      get: function (options) {
+        options.success({ value: JSON.stringify(history) })
+      },
+      set: function () {}
+    }
+  })
+
+  runtime.start()
+
+  assert.equal(sent.length, 1)
+  assert.equal(sent[0].type, "wargame.sessions.push")
+  assert.deepEqual(
+    sent[0].sessions.map((item) => item.sessionId),
+    ["already_ready"]
+  )
+})
+
 runTest("interconnect runtime applies ack only when ackMessageId matches pending send", () => {
-  const interconnectSync = require("../src/common/interconnect-sync.js")
+  const interconnectSync = require("../src/common/interconnect-session-sync.js")
   const written = []
   const registered = {}
   const history = [
@@ -1024,14 +1181,14 @@ runTest("interconnect runtime applies ack only when ackMessageId matches pending
 runTest("app lifecycle starts and stops interconnect sync runtime", () => {
   const appUx = fs.readFileSync(path.join(__dirname, "../src/app.ux"), "utf8")
 
-  assert.ok(appUx.indexOf('require("./common/interconnect-sync.js")') >= 0)
+  assert.ok(appUx.indexOf('require("./common/interconnect-session-sync.js")') >= 0)
   assert.ok(appUx.indexOf("interconnectSync.start()") >= 0)
   assert.ok(appUx.indexOf("interconnectSync.stop()") >= 0)
 })
 
 runTest("battle page requests interconnect sync after history save succeeds", () => {
   const indexUx = fs.readFileSync(path.join(__dirname, "../src/pages/index/index.ux"), "utf8")
-  const requireIndex = indexUx.indexOf('require("../../common/interconnect-sync.js")')
+  const requireIndex = indexUx.indexOf('require("../../common/interconnect-session-sync.js")')
   const saveSuccessIndex = indexUx.indexOf('self.errorKey = ""')
   const requestIndex = indexUx.indexOf("interconnectSync.requestSync()")
   const clearCurrentIndex = indexUx.indexOf("self.currentSession = null")

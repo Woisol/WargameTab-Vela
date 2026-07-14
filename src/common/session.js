@@ -229,7 +229,8 @@ function defaultSettings() {
     killVibration: "short",
     deathVibration: "long",
     aodEnabled: false,
-    visualMode: "simple"
+    visualMode: "simple",
+    interconnectDebugEnabled: false
   }
 }
 
@@ -256,6 +257,10 @@ function normalizeSettings(value) {
 
   if (["simple", "detailed"].indexOf(settings.visualMode) < 0) {
     settings.visualMode = defaults.visualMode
+  }
+
+  if (typeof settings.interconnectDebugEnabled !== "boolean") {
+    settings.interconnectDebugEnabled = defaults.interconnectDebugEnabled
   }
 
   return settings

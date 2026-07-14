@@ -41,6 +41,16 @@
           <div class="{{ aodThumbClass }}" style="{{ aodThumbStyle }}"></div>
         </div>
       </div>
+
+      <div class="settings-item" style="{{ settingsItemStyle }}" onclick="toggleInterconnectDebug">
+        <div class="item-copy">
+          <text class="item-title">{{ $t('settings.items.interconnectDebug.title') }}</text>
+          <text class="item-desc">{{ $t('settings.items.interconnectDebug.desc') }}</text>
+        </div>
+        <div class="{{ debugSwitchClass }}" style="{{ debugSwitchStyle }}">
+          <div class="{{ debugThumbClass }}" style="{{ debugThumbStyle }}"></div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -53,6 +63,7 @@ var sessionHelper = require("../../common/session.js")
 var navigation = require("../../common/navigation.js")
 var design = require("../../common/design.js")
 var settingConstants = require("../../common/constants/settings.js")
+var interconnectSync = require("../../common/interconnect-session-sync.js")
 
 var SETTINGS_KEY = settingConstants.SETTINGS_KEY
 
@@ -66,6 +77,10 @@ export default {
     aodThumbClass: "switch-thumb",
     aodSwitchStyle: design.STYLES.switchOff,
     aodThumbStyle: design.STYLES.switchThumb,
+    debugSwitchClass: "switch-control",
+    debugThumbClass: "switch-thumb",
+    debugSwitchStyle: design.STYLES.switchOff,
+    debugThumbStyle: design.STYLES.switchThumb,
     pageStyle: design.STYLES.page,
     statusStyle: design.STYLES.statusPill,
     settingsItemStyle: design.STYLES.settingsItem,
@@ -99,6 +114,12 @@ export default {
     this.saveSettings()
   },
 
+  toggleInterconnectDebug() {
+    this.settings.interconnectDebugEnabled = !this.settings.interconnectDebugEnabled
+    this.applySettings()
+    this.saveSettings()
+  },
+
   openMenu(type) {
     if (!settingConstants.SETTING_MENUS[type]) {
       this.statusKey = "settings.openFail"
@@ -127,6 +148,11 @@ export default {
     this.aodThumbClass = this.settings.aodEnabled ? "switch-thumb switch-thumb-on" : "switch-thumb"
     this.aodSwitchStyle = this.settings.aodEnabled ? design.STYLES.switchOn : design.STYLES.switchOff
     this.aodThumbStyle = design.STYLES.switchThumb
+    this.debugSwitchClass = this.settings.interconnectDebugEnabled ? "switch-control switch-on" : "switch-control"
+    this.debugThumbClass = this.settings.interconnectDebugEnabled ? "switch-thumb switch-thumb-on" : "switch-thumb"
+    this.debugSwitchStyle = this.settings.interconnectDebugEnabled ? design.STYLES.switchOn : design.STYLES.switchOff
+    this.debugThumbStyle = design.STYLES.switchThumb
+    interconnectSync.setDebugEnabled(this.settings.interconnectDebugEnabled)
   },
 
   loadSettings() {

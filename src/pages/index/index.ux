@@ -89,7 +89,7 @@ import storage from "@system.storage"
 import vibrator from "@system.vibrator"
 
 var sessionHelper = require("../../common/session.js")
-var interconnectSync = require("../../common/interconnect-sync.js")
+var interconnectSync = require("../../common/interconnect-session-sync.js")
 
 var CURRENT_KEY = "wargame_current_session"
 var HISTORY_KEY = "wargame_history"
@@ -621,6 +621,7 @@ export default {
     }
   },
 
+  // TODO 应该放到通用 utils
   vibrate(type) {
     try {
       if (!vibrator || !vibrator.vibrate) {
