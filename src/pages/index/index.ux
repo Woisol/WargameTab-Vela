@@ -8,31 +8,34 @@
     </div>
 
     <div class="center-zone">
-      <div class="title-bar battle-title-bar">
+      <div class="center-top">
         <div class="duration-pill">
           <text class="duration-text">{{ durationText }}</text>
           <image class="record-icon" src="{{ recordIcon }}"></image>
         </div>
+        <div class="date-time-block">
+          <text class="date-text">{{ dateText }}</text>
+          <text class="time-text">{{ clockText }}</text>
+        </div>
+        <text class="error-text" if="{{ errorKey }}">{{ $t(errorKey) }}</text>
       </div>
 
-      <text class="date-text">{{ dateText }}</text>
-      <text class="time-text">{{ clockText }}</text>
-      <text class="error-text" if="{{ errorKey }}">{{ $t(errorKey) }}</text>
+      <div class="center-middle">
+        <div class="{{ mainActionClass }}" onclick="handleMainAction">
+          <image class="main-action-icon" src="{{ mainActionIcon }}"></image>
+        </div>
 
-      <div class="{{ mainActionClass }}" onclick="handleMainAction">
-        <image class="main-action-icon" src="{{ mainActionIcon }}"></image>
+        <div class="ratio-block">
+          <text class="ratio-label">{{ $t("battle.ratio") }}</text>
+          <text class="ratio-value">{{ ratioText }}</text>
+        </div>
+
+        <div class="icon-button undo-button" if="{{ running }}" onclick="openUndoPanel">
+          <image class="undo-icon" src="/common/undo.png"></image>
+        </div>
       </div>
 
-      <div class="ratio-block">
-        <text class="ratio-label">{{ $t("battle.ratio") }}</text>
-        <text class="ratio-value">{{ ratioText }}</text>
-      </div>
-
-      <div class="icon-button undo-button" if="{{ running }}" onclick="openUndoPanel">
-        <image class="undo-icon" src="/common/undo.png"></image>
-      </div>
-
-      <div class="more-button" onclick="openMorePanel">
+      <div class="center-bottom more-button" onclick="openMorePanel">
         <div class="dot"></div>
         <div class="dot"></div>
         <div class="dot"></div>

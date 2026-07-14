@@ -37,10 +37,28 @@
 
 .center-zone {
   width: 150px;
+  padding-top: 18px;
+  padding-bottom: 18px;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
   background-color: #555555;
+}
+
+.center-top {
+  flex-direction: column;
+  align-items: center;
+}
+
+.date-time-block {
+  flex-direction: column;
+  align-items: center;
+}
+
+.center-middle {
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .battle-title-bar {
@@ -83,13 +101,14 @@
 
 .record-text {
   margin-left: 4px;
+  margin-bottom: 4px;
   font-size: 10px;
   color: #ffffff;
 }
 
 .date-text {
   /* width: 120px; */
-  margin-top: 8px;
+  margin-top: 0px;
   font-size: 20px;
   color: #f1f1f1;
   text-align: center;
@@ -106,7 +125,7 @@
 
 .ratio-block {
   width: 120px;
-  /* margin-top: 52px; */
+  margin: 10px 0;
   flex-direction: column;
   align-items: center;
 }
@@ -129,7 +148,6 @@
 .undo-button {
   width: 112px;
   height: 52px;
-  margin-top: 18px;
   border-radius: 26px;
   background-color: #ffffff;
   color: #111111;
@@ -233,10 +251,6 @@
   line-height: 155px;
 }
 
-.center-zone {
-  width: 150px;
-}
-
 .duration-pill {
   width: 96px;
   height: 30px;
@@ -283,10 +297,6 @@
   height: 60px;
 }
 
-.ratio-block {
-  margin-top: 10px;
-}
-
 .ratio-label {
   font-size: 14px;
   font-weight: 800;
@@ -307,7 +317,7 @@
 .undo-button {
   width: 62px;
   height: 56px;
-  margin-top: 10px;
+  margin-top: 0px;
   border-radius: 10px;
   background-color: #f5f5f5;
 }
@@ -387,11 +397,6 @@
     padding-bottom: 18px;
   }
 
-  .center-zone {
-    padding-top: 18px;
-    padding-bottom: 18px;
-  }
-
   /* .battle-title-bar {
     margin-top: 20px;
   } */
@@ -416,10 +421,6 @@
   .ratio-value {
     font-size: 44px;
     line-height: 54px;
-  }
-
-  .undo-button {
-    margin-top: 16px;
   }
 
   /* .more-button {
