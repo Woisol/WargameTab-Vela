@@ -373,10 +373,20 @@ export default {
       }
 
       self.errorKey = ""
-      interconnectSync.requestSync()
       self.currentSession = null
       self.applySession()
-      self.saveCurrent()
+      self.saveCurrent(function (currentSaved) {
+        if (self.destroyed) {
+          return
+        }
+
+        if (!currentSaved) {
+          self.errorKey = "common.saveFail"
+          return
+        }
+
+        interconnectSync.requestSync()
+      })
     })
   },
 

@@ -58,6 +58,7 @@
   top: 0px;
   width: 232px;
   height: 34px;
+  z-index: 3;
   border-radius: 30px;
   background-color: #555555;
   color: #ffffff;
@@ -271,7 +272,7 @@
   .sync-text {
     right: 62px;
     top: 0px;
-    width: 200px;
+    padding: 10px 5px;
     font-size: 16px;
   }
 

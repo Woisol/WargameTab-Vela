@@ -1109,6 +1109,66 @@ runTest("interconnect runtime sends when the channel is already ready at startup
   )
 })
 
+runTest("interconnect runtime starts lazily when a page-local request arrives", () => {
+  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const sent = []
+  const toastMessages = []
+  const history = [
+    {
+      sessionId: "lazy_start",
+      startTime: 3000,
+      endTime: 4000,
+      status: "finished",
+      summary: { kills: 2, deaths: 1 },
+      events: []
+    }
+  ]
+  const connection = {
+    onopen: function () {},
+    onmessage: function () {},
+    onclose: function () {},
+    onerror: function () {},
+    getReadyState: function () {
+      return 1
+    },
+    send: function (options) {
+      sent.push(options.data)
+      if (options.success) {
+        options.success()
+      }
+    }
+  }
+  const runtime = interconnectSync._createRuntime({
+    interconnect: {
+      instance: function () {
+        return connection
+      }
+    },
+    prompt: {
+      showToast: function (options) {
+        toastMessages.push(options.message)
+      }
+    },
+    storage: {
+      get: function (options) {
+        if (options.key === "wargame_settings") {
+          options.success({ value: JSON.stringify({ interconnectDebugEnabled: true }) })
+          return
+        }
+
+        options.success({ value: JSON.stringify(history) })
+      },
+      set: function () {}
+    }
+  })
+
+  runtime.requestSync()
+
+  assert.equal(sent.length, 1)
+  assert.equal(sent[0].type, "wargame.sessions.push")
+  assert.ok(toastMessages.some((message) => message.indexOf("request sync") >= 0))
+})
+
 runTest("interconnect runtime applies ack only when ackMessageId matches pending send", () => {
   const interconnectSync = require("../src/common/interconnect-session-sync.js")
   const written = []
@@ -1195,6 +1255,15 @@ runTest("battle page requests interconnect sync after history save succeeds", ()
 
   assert.ok(requireIndex >= 0)
   assert.ok(saveSuccessIndex >= 0)
-  assert.ok(requestIndex > saveSuccessIndex)
-  assert.ok(requestIndex < clearCurrentIndex)
+  assert.ok(requestIndex > clearCurrentIndex)
+})
+
+runTest("review retry action requests real interconnect sync for unsynced sessions", () => {
+  const reviewUx = fs.readFileSync(path.join(__dirname, "../src/pages/review/review.ux"), "utf8")
+  const requireIndex = reviewUx.indexOf('require("../../common/interconnect-session-sync.js")')
+  const retryIndex = reviewUx.indexOf("retrySync()")
+  const requestIndex = reviewUx.indexOf("interconnectSync.requestSync()")
+
+  assert.ok(requireIndex >= 0)
+  assert.ok(requestIndex > retryIndex)
 })

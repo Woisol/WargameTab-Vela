@@ -78,7 +78,7 @@ function createRuntime(deps) {
 
     try {
       console.log(text)
-    } catch (error) {}
+    } catch (error) { }
 
     if (!_debug || toast !== true) {
       return
@@ -91,7 +91,7 @@ function createRuntime(deps) {
 
     try {
       prompt.showToast({ message: text })
-    } catch (error) {}
+    } catch (error) { }
   }
 
   function formatError(data, code) {
@@ -407,7 +407,8 @@ function createRuntime(deps) {
 
   function requestSync() {
     if (!started) {
-      debugLog("request skipped: runtime stopped")
+      debugLog("runtime was not started; starting for sync request", true)
+      start()
       return
     }
 

@@ -71,6 +71,7 @@ import storage from "@system.storage"
 
 var navigation = require("../../common/navigation.js")
 var reviewPage = require("../../common/review-page.js")
+var interconnectSync = require("../../common/interconnect-session-sync.js")
 
 var HISTORY_KEY = "wargame_history"
 var SELECTED_KEY = "wargame_selected_session"
@@ -173,9 +174,12 @@ export default {
   },
 
   retrySync() {
-    if (this.syncKey !== "review.synced") {
-      this.syncKey = "review.unsyncedRetry"
+    if (this.syncKey === "review.synced") {
+      return
     }
+
+    this.syncKey = "review.unsyncedRetry"
+    interconnectSync.requestSync()
   },
 
   refreshClock() {
