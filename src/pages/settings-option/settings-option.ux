@@ -1,11 +1,13 @@
 <import src="../../components/title-bar.ux" name="title-bar"></import>
 
 <template>
-  <div class="settings-option-page" style="{{ pageStyle }}" ontouchstart="handleTouchStart" ontouchend="handleTouchEnd">
-    <title-bar
-      title-text="{{ $t(menuTitleKey) }}"
-      right-text="{{ $t(statusKey) }}"
-    ></title-bar>
+  <div
+    class="settings-option-page"
+    style="{{ pageStyle }}"
+    ontouchstart="handleTouchStart"
+    ontouchend="handleTouchEnd"
+  >
+    <title-bar title-text="{{ $t(menuTitleKey) }}" right-text="{{ $t(statusKey) }}"></title-bar>
 
     <div class="menu-panel" style="{{ pagePaddingStyle }}">
       <div
@@ -24,9 +26,9 @@
 import router from "@system.router"
 import storage from "@system.storage"
 
-var navigation = require("../../common/navigation.js")
-var design = require("../../common/design.js")
-var optionPage = require("../../common/option-page.js")
+var navigation = require("../../common/scripts/navigation.js")
+var design = require("../../common/scripts/design.js")
+var optionPage = require("../../common/scripts/option-page.js")
 
 export default {
   protected: {

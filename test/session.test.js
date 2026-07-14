@@ -2,16 +2,16 @@ const assert = require("assert")
 const fs = require("fs")
 const path = require("path")
 
-const session = require("../src/common/session.js")
-const navigation = require("../src/common/navigation.js")
-const design = require("../src/common/design.js")
+const session = require("../src/common/scripts/session.js")
+const navigation = require("../src/common/scripts/navigation.js")
+const design = require("../src/common/scripts/design.js")
 const designConstants = require("../src/common/constants/design.js")
 const settingConstants = require("../src/common/constants/settings.js")
-const optionPage = require("../src/common/option-page.js")
-const historyPage = require("../src/common/history-page.js")
-const reviewPage = require("../src/common/review-page.js")
-const sync = require("../src/common/session-sync-protocol.js")
-const prompt = require("../src/common/prompt.js")
+const optionPage = require("../src/common/scripts/option-page.js")
+const historyPage = require("../src/common/scripts/history-page.js")
+const reviewPage = require("../src/common/scripts/review-page.js")
+const sync = require("../src/common/scripts/session-sync-protocol.js")
+const prompt = require("../src/common/scripts/prompt.js")
 
 function runTest(name, fn) {
   try {
@@ -878,17 +878,17 @@ runTest("interconnect runtime wires Vela channel storage and sync helpers", () =
 })
 
 runTest("interconnect runtime shows debug toasts only when the setting is enabled", () => {
-  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const interconnectSync = require("../src/common/scripts/interconnect-session-sync.js")
   const toastMessages = []
   const connection = {
-    onopen: function () {},
-    onmessage: function () {},
-    onclose: function () {},
-    onerror: function () {},
+    onopen: function () { },
+    onmessage: function () { },
+    onclose: function () { },
+    onerror: function () { },
     getReadyState: function () {
       return 0
     },
-    send: function () {}
+    send: function () { }
   }
   const runtime = interconnectSync._createRuntime({
     interconnect: {
@@ -910,7 +910,7 @@ runTest("interconnect runtime shows debug toasts only when the setting is enable
 
         options.success({ value: "[]" })
       },
-      set: function () {}
+      set: function () { }
     }
   })
 
@@ -920,7 +920,7 @@ runTest("interconnect runtime shows debug toasts only when the setting is enable
 })
 
 runTest("interconnect runtime reports official send failure details", () => {
-  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const interconnectSync = require("../src/common/scripts/interconnect-session-sync.js")
   const toastMessages = []
   const history = [
     {
@@ -933,10 +933,10 @@ runTest("interconnect runtime reports official send failure details", () => {
     }
   ]
   const connection = {
-    onopen: function () {},
-    onmessage: function () {},
-    onclose: function () {},
-    onerror: function () {},
+    onopen: function () { },
+    onmessage: function () { },
+    onclose: function () { },
+    onerror: function () { },
     getReadyState: function (options) {
       options.success({ status: 1 })
     },
@@ -964,7 +964,7 @@ runTest("interconnect runtime reports official send failure details", () => {
 
         options.success({ value: JSON.stringify(history) })
       },
-      set: function () {}
+      set: function () { }
     }
   })
 
@@ -975,7 +975,7 @@ runTest("interconnect runtime reports official send failure details", () => {
 })
 
 runTest("interconnect runtime keeps function handler APIs reusable across stop and restart", () => {
-  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const interconnectSync = require("../src/common/scripts/interconnect-session-sync.js")
   const registered = {
     open: [],
     message: []
@@ -987,12 +987,12 @@ runTest("interconnect runtime keeps function handler APIs reusable across stop a
     onmessage: function (handler) {
       registered.message.push(handler)
     },
-    onclose: function () {},
-    onerror: function () {},
+    onclose: function () { },
+    onerror: function () { },
     getReadyState: function () {
       return 1
     },
-    send: function () {}
+    send: function () { }
   }
   const runtime = interconnectSync._createRuntime({
     interconnect: {
@@ -1004,7 +1004,7 @@ runTest("interconnect runtime keeps function handler APIs reusable across stop a
       get: function (options) {
         options.success({ value: "[]" })
       },
-      set: function () {}
+      set: function () { }
     }
   })
 
@@ -1019,7 +1019,7 @@ runTest("interconnect runtime keeps function handler APIs reusable across stop a
 })
 
 runTest("interconnect runtime waits for ready open channel before sending sync", () => {
-  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const interconnectSync = require("../src/common/scripts/interconnect-session-sync.js")
   const sent = []
   const registered = {}
   var readyState = 0
@@ -1040,8 +1040,8 @@ runTest("interconnect runtime waits for ready open channel before sending sync",
     onmessage: function (handler) {
       registered.message = handler
     },
-    onclose: function () {},
-    onerror: function () {},
+    onclose: function () { },
+    onerror: function () { },
     getReadyState: function () {
       return readyState
     },
@@ -1062,7 +1062,7 @@ runTest("interconnect runtime waits for ready open channel before sending sync",
       get: function (options) {
         options.success({ value: JSON.stringify(history) })
       },
-      set: function () {}
+      set: function () { }
     }
   })
 
@@ -1080,7 +1080,7 @@ runTest("interconnect runtime waits for ready open channel before sending sync",
 })
 
 runTest("interconnect runtime sends when the channel is already ready at startup", () => {
-  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const interconnectSync = require("../src/common/scripts/interconnect-session-sync.js")
   const sent = []
   const history = [
     {
@@ -1093,10 +1093,10 @@ runTest("interconnect runtime sends when the channel is already ready at startup
     }
   ]
   const connection = {
-    onopen: function () {},
-    onmessage: function () {},
-    onclose: function () {},
-    onerror: function () {},
+    onopen: function () { },
+    onmessage: function () { },
+    onclose: function () { },
+    onerror: function () { },
     getReadyState: function () {
       return 1
     },
@@ -1117,7 +1117,7 @@ runTest("interconnect runtime sends when the channel is already ready at startup
       get: function (options) {
         options.success({ value: JSON.stringify(history) })
       },
-      set: function () {}
+      set: function () { }
     }
   })
 
@@ -1132,7 +1132,7 @@ runTest("interconnect runtime sends when the channel is already ready at startup
 })
 
 runTest("interconnect runtime starts lazily when a page-local request arrives", () => {
-  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const interconnectSync = require("../src/common/scripts/interconnect-session-sync.js")
   const sent = []
   const toastMessages = []
   const history = [
@@ -1146,10 +1146,10 @@ runTest("interconnect runtime starts lazily when a page-local request arrives", 
     }
   ]
   const connection = {
-    onopen: function () {},
-    onmessage: function () {},
-    onclose: function () {},
-    onerror: function () {},
+    onopen: function () { },
+    onmessage: function () { },
+    onclose: function () { },
+    onerror: function () { },
     getReadyState: function () {
       return 1
     },
@@ -1180,7 +1180,7 @@ runTest("interconnect runtime starts lazily when a page-local request arrives", 
 
         options.success({ value: JSON.stringify(history) })
       },
-      set: function () {}
+      set: function () { }
     }
   })
 
@@ -1192,7 +1192,7 @@ runTest("interconnect runtime starts lazily when a page-local request arrives", 
 })
 
 runTest("interconnect runtime applies ack only when ackMessageId matches pending send", () => {
-  const interconnectSync = require("../src/common/interconnect-session-sync.js")
+  const interconnectSync = require("../src/common/scripts/interconnect-session-sync.js")
   const written = []
   const registered = {}
   const history = [
@@ -1212,12 +1212,12 @@ runTest("interconnect runtime applies ack only when ackMessageId matches pending
     onmessage: function (handler) {
       registered.message = handler
     },
-    onclose: function () {},
-    onerror: function () {},
+    onclose: function () { },
+    onerror: function () { },
     getReadyState: function () {
       return 1
     },
-    send: function () {}
+    send: function () { }
   }
   const runtime = interconnectSync._createRuntime({
     interconnect: {
@@ -1263,14 +1263,14 @@ runTest("interconnect runtime applies ack only when ackMessageId matches pending
 runTest("app lifecycle starts and stops interconnect sync runtime", () => {
   const appUx = fs.readFileSync(path.join(__dirname, "../src/app.ux"), "utf8")
 
-  assert.ok(appUx.indexOf('require("./common/interconnect-session-sync.js")') >= 0)
+  assert.ok(appUx.indexOf('require("./common/scripts/interconnect-session-sync.js")') >= 0)
   assert.ok(appUx.indexOf("interconnectSync.start()") >= 0)
   assert.ok(appUx.indexOf("interconnectSync.stop()") >= 0)
 })
 
 runTest("battle page requests interconnect sync after history save succeeds", () => {
   const indexUx = fs.readFileSync(path.join(__dirname, "../src/pages/index/index.ux"), "utf8")
-  const requireIndex = indexUx.indexOf('require("../../common/interconnect-session-sync.js")')
+  const requireIndex = indexUx.indexOf('require("../../common/scripts/interconnect-session-sync.js")')
   const saveSuccessIndex = indexUx.indexOf('self.errorKey = ""')
   const requestIndex = indexUx.indexOf("interconnectSync.requestSync()")
   const clearCurrentIndex = indexUx.indexOf("self.currentSession = null")
@@ -1282,7 +1282,7 @@ runTest("battle page requests interconnect sync after history save succeeds", ()
 
 runTest("review retry action requests real interconnect sync for unsynced sessions", () => {
   const reviewUx = fs.readFileSync(path.join(__dirname, "../src/pages/review/review.ux"), "utf8")
-  const requireIndex = reviewUx.indexOf('require("../../common/interconnect-session-sync.js")')
+  const requireIndex = reviewUx.indexOf('require("../../common/scripts/interconnect-session-sync.js")')
   const retryIndex = reviewUx.indexOf("retrySync()")
   const requestIndex = reviewUx.indexOf("interconnectSync.requestSync()")
 

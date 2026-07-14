@@ -1,4 +1,4 @@
-var designConstants = require("./constants/design.js")
+var designConstants = require("../constants/design.js")
 
 var PAGE_PADDING = designConstants.PAGE_PADDING
 

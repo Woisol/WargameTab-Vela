@@ -34,7 +34,7 @@
           if="{{ $item.deleteVisible }}"
           onclick="confirmDelete($item.sessionId)"
         >
-          <image class="delete-action-icon" src="/common/delete.png"></image>
+          <image class="delete-action-icon" src="/common/images/icons/delete.png"></image>
         </div>
       </list-item>
     </list>
@@ -55,9 +55,9 @@
 import router from "@system.router"
 import storage from "@system.storage"
 
-var navigation = require("../../common/navigation.js")
-var historyPage = require("../../common/history-page.js")
-var toast = require("../../common/prompt.js").toast
+var navigation = require("../../common/scripts/navigation.js")
+var historyPage = require("../../common/scripts/history-page.js")
+var toast = require("../../common/scripts/prompt.js").toast
 
 var HISTORY_KEY = "wargame_history"
 var SELECTED_KEY = "wargame_selected_session"

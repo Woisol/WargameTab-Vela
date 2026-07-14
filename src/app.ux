@@ -1,5 +1,5 @@
 <script>
-var interconnectSync = require("./common/interconnect-session-sync.js")
+var interconnectSync = require("./common/scripts/interconnect-session-sync.js")
 
 export default {
   onCreate() {

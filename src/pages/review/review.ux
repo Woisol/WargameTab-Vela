@@ -22,7 +22,7 @@
           </div>
           <div class="ratio-block">
             <text class="ratio-value">{{ ratioText }}</text>
-            <image class="ratio-triangle" src="/common/ratio-triangle.png"></image>
+            <image class="ratio-triangle" src="/common/images/icons/ratio-triangle.png"></image>
           </div>
           <div class="score-block death-block">
             <text class="score-label death-ghost">D</text>
@@ -69,9 +69,9 @@
 import router from "@system.router"
 import storage from "@system.storage"
 
-var navigation = require("../../common/navigation.js")
-var reviewPage = require("../../common/review-page.js")
-var interconnectSync = require("../../common/interconnect-session-sync.js")
+var navigation = require("../../common/scripts/navigation.js")
+var reviewPage = require("../../common/scripts/review-page.js")
+var interconnectSync = require("../../common/scripts/interconnect-session-sync.js")
 
 var HISTORY_KEY = "wargame_history"
 var SELECTED_KEY = "wargame_selected_session"

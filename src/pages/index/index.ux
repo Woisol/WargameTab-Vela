@@ -91,8 +91,8 @@ import router from "@system.router"
 import storage from "@system.storage"
 import vibrator from "@system.vibrator"
 
-var sessionHelper = require("../../common/session.js")
-var interconnectSync = require("../../common/interconnect-session-sync.js")
+var sessionHelper = require("../../common/scripts/session.js")
+var interconnectSync = require("../../common/scripts/interconnect-session-sync.js")
 
 var CURRENT_KEY = "wargame_current_session"
 var HISTORY_KEY = "wargame_history"
@@ -109,11 +109,11 @@ export default {
     durationText: "00:00",
     clockText: "00:00:00",
     dateText: "",
-    recordIcon: "/common/record-off.png",
+    recordIcon: "/common/images/icons/record-off.png",
     mainActionText: "",
     mainActionTextKey: "battle.start",
     mainActionClass: "main-action start-action",
-    mainActionIcon: "/common/play.png",
+    mainActionIcon: "/common/images/icons/play.png",
     showUndoPanel: false,
     showMorePanel: false,
     showConfirm: false,
@@ -131,7 +131,7 @@ export default {
         actionClass: "overlay-action overlay-undo",
         label: "",
         labelClass: "overlay-action-label",
-        icon: "/common/undo.png",
+        icon: "/common/images/icons/undo.png",
         iconClass: "overlay-undo-icon"
       },
       {
@@ -152,7 +152,7 @@ export default {
         actionClass: "overlay-action overlay-icon-action",
         label: "",
         labelClass: "overlay-action-label",
-        icon: "/common/history.png",
+        icon: "/common/images/icons/history.png",
         iconClass: "overlay-action-icon"
       },
       {
@@ -160,7 +160,7 @@ export default {
         actionClass: "overlay-action overlay-icon-action",
         label: "",
         labelClass: "overlay-action-label",
-        icon: "/common/settings.png",
+        icon: "/common/images/icons/settings.png",
         iconClass: "overlay-action-icon"
       }
     ],
@@ -428,11 +428,15 @@ export default {
     this.ratioText = display.ratioText
     this.durationText = display.durationText
     this.aodSummaryText = display.aodSummaryText
-    this.recordIcon = display.running ? "/common/record-on.png" : "/common/record-off.png"
+    this.recordIcon = display.running
+      ? "/common/images/icons/record-on.png"
+      : "/common/images/icons/record-off.png"
     this.mainActionText = ""
     this.mainActionTextKey = display.running ? "battle.stop" : "battle.start"
     this.mainActionClass = display.running ? "main-action stop-action" : "main-action start-action"
-    this.mainActionIcon = display.running ? "/common/stop.png" : "/common/play.png"
+    this.mainActionIcon = display.running
+      ? "/common/images/icons/stop.png"
+      : "/common/images/icons/play.png"
   },
 
   refreshTime() {

@@ -1,5 +1,5 @@
 var sessionHelper = require("./session.js")
-var settingConstants = require("./constants/settings.js")
+var settingConstants = require("../constants/settings.js")
 
 function parseJson(value) {
   try {
