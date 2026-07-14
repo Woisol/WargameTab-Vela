@@ -21,6 +21,7 @@
     "deleteTitle": "Delete record",
     "deleteMessage": "Delete this battle record?",
     "selectFail": "Select failed",
+    "deleteSuccess": "Delete successful",
     "deleteFail": "Delete failed",
     "synced": "(Synced)",
     "unsynced": "(Unsynced)"

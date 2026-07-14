@@ -1,4 +1,5 @@
 var protocol = require("./session-sync-protocol.js")
+var promptHelper = require("./prompt.js")
 
 var HISTORY_KEY = "wargame_history"
 var SETTINGS_KEY = "wargame_settings"
@@ -7,7 +8,7 @@ function createRuntime(deps) {
   var config = deps || {}
   var interconnectApi = null
   var storageApi = null
-  var promptApi = null
+  var showToast = config.prompt ? promptHelper._createToast(config.prompt) : promptHelper.toast
   var connection = null
   var started = false
   var channelOpen = false
@@ -51,24 +52,6 @@ function createRuntime(deps) {
     return storageApi
   }
 
-  function getPrompt() {
-    if (config.prompt) {
-      return config.prompt
-    }
-
-    if (promptApi !== null) {
-      return promptApi
-    }
-
-    try {
-      promptApi = require("@system.prompt")
-    } catch (error) {
-      promptApi = null
-    }
-
-    return promptApi
-  }
-
   function setDebugEnabled(value) {
     _debug = value === true
   }
@@ -84,14 +67,7 @@ function createRuntime(deps) {
       return
     }
 
-    var prompt = getPrompt()
-    if (!prompt || typeof prompt.showToast !== "function") {
-      return
-    }
-
-    try {
-      prompt.showToast({ message: text })
-    } catch (error) { }
+    showToast(message, "interconnect")
   }
 
   function formatError(data, code) {

@@ -11,6 +11,7 @@ const optionPage = require("../src/common/option-page.js")
 const historyPage = require("../src/common/history-page.js")
 const reviewPage = require("../src/common/review-page.js")
 const sync = require("../src/common/session-sync-protocol.js")
+const prompt = require("../src/common/prompt.js")
 
 function runTest(name, fn) {
   try {
@@ -22,6 +23,27 @@ function runTest(name, fn) {
     console.error(error && error.stack ? error.stack : error)
   }
 }
+
+runTest("generic toast formats optional fields and safely handles prompt failures", () => {
+  const messages = []
+  const toast = prompt._createToast({
+    showToast: function (options) {
+      messages.push(options.message)
+    }
+  })
+
+  toast("sync failed", "interconnect")
+  toast("plain message")
+
+  assert.deepEqual(messages, ["[interconnect] sync failed", "plain message"])
+  assert.doesNotThrow(function () {
+    prompt._createToast({
+      showToast: function () {
+        throw new Error("prompt unavailable")
+      }
+    })("ignored", "test")
+  })
+})
 
 runTest("createSession creates an ongoing session with zero summary", () => {
   const result = session.createSession(1752057600000)

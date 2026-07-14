@@ -57,6 +57,7 @@ import storage from "@system.storage"
 
 var navigation = require("../../common/navigation.js")
 var historyPage = require("../../common/history-page.js")
+var toast = require("../../common/prompt.js").toast
 
 var HISTORY_KEY = "wargame_history"
 var SELECTED_KEY = "wargame_selected_session"
@@ -195,6 +196,8 @@ export default {
       self.history = nextHistory
       self.applyHistory(nextHistory)
       self.cancelDelete()
+
+      toast(self.$t("history.deleteSuccess"))
     })
   },
 

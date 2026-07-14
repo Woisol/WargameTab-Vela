@@ -21,6 +21,7 @@
     "deleteTitle": "删除记录",
     "deleteMessage": "确认删除这条历史战绩？",
     "selectFail": "选择失败",
+    "deleteSuccess": "删除成功",
     "deleteFail": "删除失败",
     "synced": "（已同步）",
     "unsynced": "（未同步）"
