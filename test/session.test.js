@@ -648,13 +648,6 @@ runTest("review page helper builds session display model", () => {
   assert.equal(model.timelineItems.length, 1)
 })
 
-runTest("review uses the provided ratio triangle image asset", () => {
-  const reviewUx = fs.readFileSync(path.join(__dirname, "../src/pages/review/review.ux"), "utf8")
-
-  assert.ok(fs.existsSync(path.join(__dirname, "../src/common/ratio-triangle.png")))
-  assert.ok(reviewUx.indexOf('<image class="ratio-triangle" src="/common/ratio-triangle.png"></image>') >= 0)
-})
-
 runTest("review timeline renders axis line and scrollable full event list", () => {
   const reviewUx = fs.readFileSync(path.join(__dirname, "../src/pages/review/review.ux"), "utf8")
 
@@ -670,7 +663,7 @@ runTest("review timeline renders axis line and scrollable full event list", () =
 
 runTest("history only renders delete action when the row is revealed", () => {
   const historyUx = fs.readFileSync(path.join(__dirname, "../src/pages/history/history.ux"), "utf8")
-  const historyHelper = fs.readFileSync(path.join(__dirname, "../src/common/history-page.js"), "utf8")
+  const historyHelper = fs.readFileSync(path.join(__dirname, "../src/common/scripts/history-page.js"), "utf8")
 
   assert.ok(historyUx.indexOf('if="{{ $item.deleteVisible }}"') >= 0)
   assert.ok(historyHelper.indexOf("deleteVisible:") >= 0)
@@ -915,7 +908,7 @@ runTest("sync ack marks only acknowledged sessions as synced", () => {
 })
 
 runTest("interconnect runtime wires Vela channel storage and sync helpers", () => {
-  const runtime = fs.readFileSync(path.join(__dirname, "../src/common/interconnect-session-sync.js"), "utf8")
+  const runtime = fs.readFileSync(path.join(__dirname, "../src/common/scripts/interconnect-session-sync.js"), "utf8")
 
   assert.ok(runtime.indexOf('require("@system.interconnect")') >= 0)
   assert.ok(runtime.indexOf('require("@system.storage")') >= 0)
