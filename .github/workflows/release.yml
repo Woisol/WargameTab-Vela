@@ -1,0 +1,73 @@
+name: Release Vela Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare Vela signing
+        env:
+          VELA_RELEASE_CERTIFICATE_PEM: ${{ secrets.VELA_RELEASE_CERTIFICATE_PEM }}
+          VELA_RELEASE_PRIVATE_PEM: ${{ secrets.VELA_RELEASE_PRIVATE_PEM }}
+        run: |
+          set -euo pipefail
+          test -n "${VELA_RELEASE_CERTIFICATE_PEM:-}"
+          test -n "${VELA_RELEASE_PRIVATE_PEM:-}"
+          mkdir -p sign/release
+          printf '%s\n' "$VELA_RELEASE_CERTIFICATE_PEM" > sign/release/certificate.pem
+          printf '%s\n' "$VELA_RELEASE_PRIVATE_PEM" > sign/release/private.pem
+          test -s sign/release/certificate.pem
+          test -s sign/release/private.pem
+
+      - name: Build release package
+        run: pnpm run release
+
+      - name: Rename release package
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(dist/*.rpk)
+          if [ "${#packages[@]}" -ne 1 ]; then
+            printf 'Expected exactly one top-level RPK in dist, found %s.\n' "${#packages[@]}" >&2
+            exit 1
+          fi
+          mv "${packages[0]}" "wargame-tab-${GITHUB_REF_NAME}.rpk"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          artifact="wargame-tab-${GITHUB_REF_NAME}.rpk"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$artifact" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$artifact" \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes
+          fi
