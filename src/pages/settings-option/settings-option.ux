@@ -16,7 +16,10 @@
         style="{{ $item.optionStyle }}"
         onclick="selectOption($item.value)"
       >
-        <text class="menu-option-text">{{ $t($item.labelKey) }}</text>
+        <div class="menu-option-copy">
+          <text class="menu-option-text">{{ $t($item.labelKey) }}</text>
+          <text class="menu-option-desc" if="{{ $item.descKey }}">{{ $t($item.descKey) }}</text>
+        </div>
       </div>
     </div>
   </div>

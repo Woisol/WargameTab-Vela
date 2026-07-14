@@ -4,7 +4,12 @@ var SETTINGS_KEY = "wargame_settings"
 
 var TRIGGER_OPTIONS = [
   { labelKey: "settings.options.longPress", value: "longPress" },
-  { labelKey: "settings.options.click", value: "click" }
+  { labelKey: "settings.options.click", value: "click" },
+  {
+    labelKey: "settings.options.swipe",
+    descKey: "settings.options.swipeDesc",
+    value: "swipe"
+  }
 ]
 
 var VIBRATION_OPTIONS = [
@@ -40,6 +45,7 @@ function createSettingMenuOptions(type, selected) {
   return getSettingMenu(type).options.map(function (option) {
     return {
       labelKey: option.labelKey,
+      descKey: option.descKey || "",
       value: option.value,
       optionClass: option.value === selected ? "menu-option selected-option" : "menu-option",
       optionStyle:

@@ -23,8 +23,13 @@ function isDeleteSwipe(startX, endX, startY, endY) {
   return deltaX >= 72 && deltaY <= 48
 }
 
+function isVerticalSwipeDirection(direction) {
+  return direction === "up" || direction === "down"
+}
+
 module.exports = {
   getTouchPoint: getTouchPoint,
   isBackSwipe: isBackSwipe,
-  isDeleteSwipe: isDeleteSwipe
+  isDeleteSwipe: isDeleteSwipe,
+  isVerticalSwipeDirection: isVerticalSwipeDirection
 }

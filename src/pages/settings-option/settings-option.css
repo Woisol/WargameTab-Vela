@@ -37,6 +37,11 @@
   align-items: center;
 }
 
+.menu-option-copy {
+  flex-direction: column;
+  align-items: center;
+}
+
 .selected-option {
 }
 
@@ -44,6 +49,13 @@
   font-size: 22px;
   font-weight: 700;
   color: #ffffff;
+  text-align: center;
+}
+
+.menu-option-desc {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #8a8a8a;
   text-align: center;
 }
 

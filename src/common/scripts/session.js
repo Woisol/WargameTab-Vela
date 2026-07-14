@@ -239,7 +239,7 @@ function normalizeSettings(value) {
   var saved = value || {}
   var settings = Object.assign({}, defaults, saved)
 
-  if (["longPress", "click"].indexOf(settings.triggerMode) < 0) {
+  if (["longPress", "click", "swipe"].indexOf(settings.triggerMode) < 0) {
     settings.triggerMode = defaults.triggerMode
   }
 

@@ -270,6 +270,13 @@ runTest("isDeleteSwipe only accepts left swipe distinct from back gesture", () =
   assert.equal(navigation.isDeleteSwipe(220, 90, 80, 180), false)
 })
 
+runTest("isVerticalSwipeDirection accepts only up and down gestures", () => {
+  assert.equal(navigation.isVerticalSwipeDirection("up"), true)
+  assert.equal(navigation.isVerticalSwipeDirection("down"), true)
+  assert.equal(navigation.isVerticalSwipeDirection("left"), false)
+  assert.equal(navigation.isVerticalSwipeDirection("right"), false)
+})
+
 runTest("design exposes shared page padding styles", () => {
   assert.equal(design.PAGE_PADDING.square, 10)
   assert.equal(design.PAGE_PADDING.circle, 48)
@@ -300,8 +307,15 @@ runTest("setting constants provide reusable option menu definitions", () => {
     })),
     [
       { value: "longPress", optionClass: "menu-option" },
-      { value: "click", optionClass: "menu-option selected-option" }
+      { value: "click", optionClass: "menu-option selected-option" },
+      { value: "swipe", optionClass: "menu-option" }
     ]
+  )
+  assert.equal(
+    settingConstants.SETTING_MENUS.trigger.options.some(function (option) {
+      return option.value === "swipe" && option.descKey === "settings.options.swipeDesc"
+    }),
+    true
   )
   assert.equal(settingConstants.getSelectedValue("killVibration", { killVibration: "long" }), "long")
   assert.deepEqual(
@@ -334,6 +348,14 @@ runTest("option page definitions own settings storage and update callbacks", () 
     visualMode: "simple",
     interconnectDebugEnabled: false
   })
+
+  const triggerModel = optionPage.createOptionPageModel("trigger", "{}")
+  assert.equal(
+    triggerModel.options.some(function (option) {
+      return option.value === "swipe" && option.descKey === "settings.options.swipeDesc"
+    }),
+    true
+  )
 })
 
 runTest("settings option page receives menu type through router params", () => {
@@ -369,6 +391,40 @@ runTest("settings pages use i18n text keys instead of hardcoded labels", () => {
   assert.equal(en.common.empty, "")
   assert.equal(zh.settings.title, "设置")
   assert.equal(en.settings.title, "Settings")
+})
+
+runTest("watch pages wire native battle swipes and optional option descriptions", () => {
+  const indexUx = fs.readFileSync(path.join(__dirname, "../src/pages/index/index.ux"), "utf8")
+  const navigationJs = fs.readFileSync(path.join(__dirname, "../src/common/scripts/navigation.js"), "utf8")
+  const optionUx = fs.readFileSync(path.join(__dirname, "../src/pages/settings-option/settings-option.ux"), "utf8")
+  const zh = JSON.parse(fs.readFileSync(path.join(__dirname, "../src/i18n/zh-CN.json"), "utf8"))
+  const en = JSON.parse(fs.readFileSync(path.join(__dirname, "../src/i18n/en.json"), "utf8"))
+  const defaults = JSON.parse(fs.readFileSync(path.join(__dirname, "../src/i18n/defaults.json"), "utf8"))
+
+  assert.ok(indexUx.indexOf('onswipe="swipeKill"') >= 0)
+  assert.ok(indexUx.indexOf('onswipe="swipeDeath"') >= 0)
+  assert.ok(indexUx.indexOf("navigation.isVerticalSwipeDirection") >= 0)
+  assert.ok(navigationJs.indexOf('direction === "up"') >= 0)
+  assert.ok(navigationJs.indexOf('direction === "down"') >= 0)
+  assert.ok(indexUx.indexOf('this.settings.triggerMode === "longPress"') >= 0)
+  assert.ok(indexUx.indexOf('this.settings.triggerMode === "swipe"') >= 0)
+  assert.ok(optionUx.indexOf('if="{{ $item.descKey }}"') >= 0)
+  assert.equal(zh.settings.options.swipe, "滑动")
+  assert.equal(zh.settings.options.swipeDesc, "在 K / D 区域向上或向下滑动计数")
+  assert.equal(en.settings.options.swipe, "Swipe")
+  assert.equal(en.settings.options.swipeDesc, "Swipe up or down in the K / D area to count")
+  assert.equal(defaults.settings.options.swipe, "滑动")
+  assert.equal(defaults.settings.options.swipeDesc, "在 K / D 区域向上或向下滑动计数")
+})
+
+runTest("AOD page owns a low-frequency offset timer and clears it on wake and destroy", () => {
+  const indexUx = fs.readFileSync(path.join(__dirname, "../src/pages/index/index.ux"), "utf8")
+
+  assert.ok(indexUx.indexOf('style="{{ aodOffsetStyle }}"') >= 0)
+  assert.ok(indexUx.indexOf("aodOffsetTimerId") >= 0)
+  assert.ok(indexUx.indexOf("30000") >= 0)
+  assert.ok(indexUx.indexOf("clearAodOffsetTimer()") >= 0)
+  assert.ok(indexUx.indexOf("startAodOffsetTimer()") >= 0)
 })
 
 runTest("watch pages use explicit custom components without slot wrappers", () => {
@@ -651,9 +707,11 @@ runTest("normalizeSettings keeps valid choices and replaces invalid ones with de
     }
   )
 
+  assert.equal(session.normalizeSettings({ triggerMode: "swipe" }).triggerMode, "swipe")
+
   assert.deepEqual(
     session.normalizeSettings({
-      triggerMode: "swipe",
+      triggerMode: "gesture",
       killVibration: "buzz",
       deathVibration: "",
       aodEnabled: "yes",

@@ -65,6 +65,8 @@
     "options": {
       "longPress": "Long press",
       "click": "Tap",
+      "swipe": "Swipe",
+      "swipeDesc": "Swipe up or down in the K / D area to count",
       "shortVibration": "Short",
       "doubleVibration": "Double",
       "longVibration": "Long",

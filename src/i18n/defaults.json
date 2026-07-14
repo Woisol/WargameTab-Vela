@@ -61,6 +61,8 @@
     "options": {
       "longPress": "长按",
       "click": "点击",
+      "swipe": "滑动",
+      "swipeDesc": "在 K / D 区域向上或向下滑动计数",
       "shortVibration": "短震",
       "doubleVibration": "快速两次",
       "longVibration": "长震",

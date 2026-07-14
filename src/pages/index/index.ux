@@ -3,7 +3,7 @@
 
 <template>
   <div class="battle-page" onclick="handlePageInteraction">
-    <div class="zone kill-zone" onclick="tapKill" onlongpress="pressKill">
+    <div class="zone kill-zone" onclick="tapKill" onlongpress="pressKill" onswipe="swipeKill">
       <text class="side-count">{{ killCount }}</text>
     </div>
 
@@ -42,7 +42,7 @@
       </div>
     </div>
 
-    <div class="zone death-zone" onclick="tapDeath" onlongpress="pressDeath">
+    <div class="zone death-zone" onclick="tapDeath" onlongpress="pressDeath" onswipe="swipeDeath">
       <text class="side-count">{{ deathCount }}</text>
     </div>
 
@@ -78,10 +78,12 @@
     ></confirm-dialog>
 
     <div class="aod-page" if="{{ aodActive }}" onclick="wakeFromAod">
-      <text class="aod-date">{{ dateText }}</text>
-      <text class="aod-time">{{ clockText }}</text>
-      <text class="aod-ratio">{{ ratioText }}</text>
-      <text class="aod-summary">{{ aodSummaryText }}</text>
+      <div class="aod-content" style="{{ aodOffsetStyle }}">
+        <text class="aod-date">{{ dateText }}</text>
+        <text class="aod-time">{{ clockText }}</text>
+        <text class="aod-ratio">{{ ratioText }}</text>
+        <text class="aod-summary">{{ aodSummaryText }}</text>
+      </div>
     </div>
   </div>
 </template>
@@ -92,10 +94,17 @@ import storage from "@system.storage"
 import vibrator from "@system.vibrator"
 
 var sessionHelper = require("../../common/scripts/session.js")
+var navigation = require("../../common/scripts/navigation.js")
 var interconnectSync = require("../../common/scripts/interconnect-session-sync.js")
 
 var CURRENT_KEY = "wargame_current_session"
 var HISTORY_KEY = "wargame_history"
+var AOD_OFFSETS = [
+  { x: -2, y: -1 },
+  { x: 2, y: -1 },
+  { x: 2, y: 1 },
+  { x: -2, y: 1 }
+]
 
 export default {
   // 当前页自维护战斗中状态，历史与复盘页从本地记录读取。
@@ -171,6 +180,9 @@ export default {
     confirmAction: "",
     errorKey: "",
     aodActive: false,
+    aodOffsetStyle: "transform: translateX(0px) translateY(0px);",
+    aodOffsetIndex: 0,
+    aodOffsetTimerId: 0,
     aodSummaryText: "K 0 / D 0",
     timerId: 0,
     idleTimerId: 0,
@@ -202,6 +214,7 @@ export default {
       clearInterval(this.timerId)
       this.timerId = 0
     }
+    this.clearAodOffsetTimer()
     this.clearIdleTimer()
     this.saveCurrent()
   },
@@ -244,7 +257,22 @@ export default {
     }
 
     this.resetIdleTimer()
-    if (this.settings.triggerMode !== "click") {
+    if (this.settings.triggerMode === "longPress") {
+      this.addBattleEvent("kill")
+    }
+  },
+
+  swipeKill(event) {
+    if (!this.currentSession || this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    var direction = event && (event.direction || (event.detail && event.detail.direction))
+    if (
+      this.settings.triggerMode === "swipe" &&
+      navigation.isVerticalSwipeDirection(direction)
+    ) {
       this.addBattleEvent("kill")
     }
   },
@@ -266,7 +294,22 @@ export default {
     }
 
     this.resetIdleTimer()
-    if (this.settings.triggerMode !== "click") {
+    if (this.settings.triggerMode === "longPress") {
+      this.addBattleEvent("death")
+    }
+  },
+
+  swipeDeath(event) {
+    if (!this.currentSession || this.aodActive) {
+      return
+    }
+
+    this.resetIdleTimer()
+    var direction = event && (event.direction || (event.detail && event.detail.direction))
+    if (
+      this.settings.triggerMode === "swipe" &&
+      navigation.isVerticalSwipeDirection(direction)
+    ) {
       this.addBattleEvent("death")
     }
   },
@@ -606,6 +649,9 @@ export default {
     }
 
     this.aodActive = false
+    this.clearAodOffsetTimer()
+    this.aodOffsetIndex = 0
+    this.aodOffsetStyle = "transform: translateX(0px) translateY(0px);"
     this.resetIdleTimer()
   },
 
@@ -631,6 +677,37 @@ export default {
     this.showMorePanel = false
     this.showConfirm = false
     this.aodActive = true
+    this.startAodOffsetTimer()
+  },
+
+  startAodOffsetTimer() {
+    var self = this
+
+    this.clearAodOffsetTimer()
+    this.aodOffsetIndex = 0
+    this.applyAodOffset()
+    this.aodOffsetTimerId = setInterval(function () {
+      if (self.destroyed || !self.aodActive) {
+        return
+      }
+
+      self.aodOffsetIndex = (self.aodOffsetIndex + 1) % AOD_OFFSETS.length
+      self.applyAodOffset()
+    }, 30000)
+  },
+
+  applyAodOffset() {
+    var offset = AOD_OFFSETS[this.aodOffsetIndex % AOD_OFFSETS.length]
+
+    this.aodOffsetStyle =
+      "transform: translateX(" + offset.x + "px) translateY(" + offset.y + "px);"
+  },
+
+  clearAodOffsetTimer() {
+    if (this.aodOffsetTimerId) {
+      clearInterval(this.aodOffsetTimerId)
+      this.aodOffsetTimerId = 0
+    }
   },
 
   clearIdleTimer() {
