@@ -53,17 +53,6 @@
   align-items: center;
 }
 
-.time-pill {
-  width: 70px;
-  height: 30px;
-  border-radius: 15px;
-  background-color: #ffffff;
-  color: #111111;
-  font-size: 18px;
-  text-align: center;
-  line-height: 30px;
-}
-
 .battle-title-bar {
   width: 150px;
   justify-content: center;
@@ -100,15 +89,15 @@
 .date-text {
   /* width: 120px; */
   margin-top: 8px;
-  font-size: 16px;
+  font-size: 20px;
   color: #f1f1f1;
   text-align: center;
 }
 
-.duration-text {
+.time-text {
   width: 120px;
   margin-top: 0px;
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 700;
   color: #ffffff;
   text-align: center;
@@ -255,7 +244,7 @@
   width: 150px;
 }
 
-.time-pill {
+.duration-pill {
   width: 96px;
   height: 30px;
   border-radius: 10px;
@@ -265,7 +254,7 @@
   background-color: #999999;
 }
 
-.time-text {
+.duration-text {
   width: 60px;
   font-size: 20px;
   font-weight: 800;
@@ -423,7 +412,7 @@
     font-size: 14px;
   }
 
-  .duration-text {
+  .time-text {
     font-size: 20px;
   }
 

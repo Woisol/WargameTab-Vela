@@ -9,14 +9,14 @@
 
     <div class="center-zone">
       <div class="title-bar battle-title-bar">
-        <div class="time-pill">
-          <text class="time-text">{{ clockText }}</text>
+        <div class="duration-pill">
+          <text class="duration-text">{{ durationText }}</text>
           <image class="record-icon" src="{{ recordIcon }}"></image>
         </div>
       </div>
 
       <text class="date-text">{{ dateText }}</text>
-      <text class="duration-text">{{ durationText }}</text>
+      <text class="time-text">{{ clockText }}</text>
       <text class="error-text" if="{{ errorKey }}">{{ $t(errorKey) }}</text>
 
       <div class="{{ mainActionClass }}" onclick="handleMainAction">
@@ -76,7 +76,7 @@
 
     <div class="aod-page" if="{{ aodActive }}" onclick="wakeFromAod">
       <text class="aod-date">{{ dateText }}</text>
-      <text class="aod-time">{{ aodClockText }}</text>
+      <text class="aod-time">{{ clockText }}</text>
       <text class="aod-ratio">{{ ratioText }}</text>
       <text class="aod-summary">{{ aodSummaryText }}</text>
     </div>
@@ -103,8 +103,7 @@ export default {
     deathCount: 0,
     ratioText: "0.00",
     durationText: "00:00",
-    clockText: "00:00",
-    aodClockText: "00:00:00",
+    clockText: "00:00:00",
     dateText: "",
     recordIcon: "/common/record-off.png",
     mainActionText: "",
@@ -426,8 +425,8 @@ export default {
     var month = now.getMonth() + 1
     var day = now.getDate()
 
-    this.clockText = this.pad(now.getHours()) + ":" + this.pad(now.getMinutes())
-    this.aodClockText = this.clockText + ":" + this.pad(now.getSeconds())
+    this.clockText =
+      this.pad(now.getHours()) + ":" + this.pad(now.getMinutes()) + ":" + this.pad(now.getSeconds())
     this.dateText = now.getFullYear() + "-" + this.pad(month) + "-" + this.pad(day)
 
     this.applySession()

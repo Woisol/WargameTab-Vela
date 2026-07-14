@@ -8,55 +8,58 @@
     ></title-bar>
 
     <div class="empty-box" if="{{ !hasSession }}">
-      <text class="empty-text">{{ $t('review.empty') }}</text>
+      <text class="empty-text">{{ $t("review.empty") }}</text>
     </div>
 
     <scroll class="review-body" scroll-y="true" if="{{ hasSession }}">
       <div class="review-content-item">
         <text class="sync-text" onclick="retrySync">{{ $t(syncKey) }}</text>
 
-      <div class="summary-panel">
-        <div class="score-block kill-block">
-          <text class="score-label kill-ghost">K</text>
-          <text class="score-number">{{ killCount }}</text>
-        </div>
-        <div class="ratio-block">
-          <text class="ratio-value">{{ ratioText }}</text>
-          <image class="ratio-triangle" src="/common/ratio-triangle.png"></image>
-        </div>
-        <div class="score-block death-block">
-          <text class="score-label death-ghost">D</text>
-          <text class="score-number">{{ deathCount }}</text>
-        </div>
-      </div>
-
-      <div class="info-card">
-        <text class="time-range">{{ rangeText }}</text>
-        <text class="duration-text">{{ $t('review.durationPrefix') }}{{ durationMinutes }}{{ $t('review.minuteUnit') }}{{ durationSeconds }}{{ $t('review.secondUnit') }}</text>
-      </div>
-
-      <div class="timeline-card">
-        <div class="timeline-track">
-          <div
-            class="{{ $item.markerClass }}"
-            for="{{ timelineItems }}"
-            style="{{ $item.markerStyle }}"
-          ></div>
-        </div>
-        <div class="timeline-axis">
-          <div class="axis-line"></div>
-          <text class="axis-label" for="{{ timelineAxisItems }}" style="{{ $item.style }}">
-            {{ $item.label }}
-          </text>
-        </div>
-        <div class="timeline-list">
-          <div class="event-item" for="{{ timelineListItems }}">
-            <div class="{{ $item.eventDotClass }}"></div>
-            <text class="event-time">{{ $item.timeText }}</text>
-            <text class="event-type">{{ $item.typeText }}</text>
+        <div class="summary-panel">
+          <div class="score-block kill-block">
+            <text class="score-label kill-ghost">K</text>
+            <text class="score-number">{{ killCount }}</text>
+          </div>
+          <div class="ratio-block">
+            <text class="ratio-value">{{ ratioText }}</text>
+            <image class="ratio-triangle" src="/common/ratio-triangle.png"></image>
+          </div>
+          <div class="score-block death-block">
+            <text class="score-label death-ghost">D</text>
+            <text class="score-number">{{ deathCount }}</text>
           </div>
         </div>
-      </div>
+
+        <div class="info-card">
+          <text class="time-range">{{ rangeText }}</text>
+          <text class="duration-text">
+            {{ $t("review.durationPrefix") }}{{ durationMinutes }}{{ $t("review.minuteUnit")
+            }}{{ durationSeconds }}{{ $t("review.secondUnit") }}
+          </text>
+        </div>
+
+        <div class="timeline-card">
+          <div class="timeline-track">
+            <div
+              class="{{ $item.markerClass }}"
+              for="{{ timelineItems }}"
+              style="{{ $item.markerStyle }}"
+            ></div>
+          </div>
+          <div class="timeline-axis">
+            <div class="axis-line"></div>
+            <text class="axis-label" for="{{ timelineAxisItems }}" style="{{ $item.style }}">
+              {{ $item.label }}
+            </text>
+          </div>
+          <div class="timeline-list">
+            <div class="event-item" for="{{ timelineListItems }}">
+              <div class="{{ $item.eventDotClass }}"></div>
+              <text class="event-time">{{ $item.timeText }}</text>
+              <text class="event-type">{{ $item.typeText }}</text>
+            </div>
+          </div>
+        </div>
       </div>
     </scroll>
   </div>
