@@ -28,7 +28,7 @@
         <text class="ratio-value">{{ ratioText }}</text>
       </div>
 
-      <div class="icon-button undo-button" onclick="openUndoPanel">
+      <div class="icon-button undo-button" if="{{ running }}" onclick="openUndoPanel">
         <image class="undo-icon" src="/common/undo.png"></image>
       </div>
 
@@ -99,6 +99,7 @@ export default {
   private: {
     currentSession: null,
     settings: sessionHelper.defaultSettings(),
+    running: false,
     killCount: 0,
     deathCount: 0,
     ratioText: "0.00",
@@ -418,6 +419,7 @@ export default {
   applySession() {
     var display = sessionHelper.createDisplaySummary(this.currentSession, Date.now())
 
+    this.running = display.running
     this.killCount = display.kills
     this.deathCount = display.deaths
     this.ratioText = display.ratioText

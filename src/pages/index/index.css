@@ -38,6 +38,7 @@
 .center-zone {
   width: 150px;
   flex-direction: column;
+  justify-content: space-between;
   align-items: center;
   background-color: #555555;
 }
@@ -105,19 +106,20 @@
 
 .ratio-block {
   width: 120px;
-  margin-top: 52px;
+  /* margin-top: 52px; */
   flex-direction: column;
   align-items: center;
 }
 
 .ratio-label {
+  height: 18px;
   font-size: 18px;
   color: #d8d8d8;
   text-align: center;
 }
 
 .ratio-value {
-  margin-top: 8px;
+  margin-top: -8px;
   font-size: 34px;
   font-weight: 700;
   color: #ffffff;
@@ -153,15 +155,6 @@
   background-color: rgba(255, 255, 255, 0.18);
   color: #ffffff;
   font-size: 14px;
-}
-
-.page-dots {
-  width: 52px;
-  height: 12px;
-  margin-top: 28px;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .dot {
@@ -271,7 +264,7 @@
 .main-action {
   width: 60px;
   height: 60px;
-  margin-top: 36px;
+  /* margin-top: 36px; */
   border-radius: 10px;
   justify-content: center;
   align-items: center;
@@ -327,7 +320,7 @@
 .more-button {
   width: 65px;
   height: 25px;
-  margin-top: 94px;
+  /* margin-top: 94px; */
   border-radius: 10px;
   border-width: 1px;
   border-color: #dbdbdb;
@@ -399,9 +392,9 @@
     padding-bottom: 18px;
   }
 
-  .battle-title-bar {
+  /* .battle-title-bar {
     margin-top: 20px;
-  }
+  } */
 
   .side-count {
     font-size: 96px;
@@ -416,9 +409,9 @@
     font-size: 20px;
   }
 
-  .main-action {
+  /* .main-action {
     margin-top: 24px;
-  }
+  } */
 
   .ratio-value {
     font-size: 44px;
@@ -429,8 +422,8 @@
     margin-top: 16px;
   }
 
-  .more-button {
+  /* .more-button {
     margin-top: 58px;
-  }
+  } */
 
 }
