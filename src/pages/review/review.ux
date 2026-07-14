@@ -13,7 +13,7 @@
 
     <scroll class="review-body" scroll-y="true" if="{{ hasSession }}">
       <div class="review-content-item">
-        <text class="sync-text" onclick="retrySync">{{ $t(syncKey) }}</text>
+        <text class="sync-text" onclick="retrySync">{{ syncText }}</text>
 
         <div class="summary-panel">
           <div class="score-block kill-block">
@@ -82,7 +82,9 @@ export default {
     titleDateText: "",
     clockText: "00:00",
     ratioText: "0.00",
-    syncKey: "review.unsyncedRetry",
+    // 这里又动态 $t() 😡
+    // syncKey: "review.unsyncedRetry",
+    syncText: "",
     killCount: 0,
     deathCount: 0,
     rangeText: "--:--:-- - --:--:--",
@@ -162,7 +164,7 @@ export default {
 
     this.titleDateText = model.titleDateText
     this.ratioText = model.ratioText
-    this.syncKey = model.syncKey
+    this.syncText = this.$t(model.syncKey)
     this.killCount = model.killCount
     this.deathCount = model.deathCount
     this.rangeText = model.rangeText
@@ -174,11 +176,13 @@ export default {
   },
 
   retrySync() {
-    if (this.syncKey === "review.synced") {
+    console.log("retrySync: " + this.syncText)
+    if (this.syncText === "review.synced") {
       return
     }
 
-    this.syncKey = "review.unsyncedRetry"
+    // this.syncText = this.$t("review.unsyncedRetry")
+    this.syncText = this.$t("review.synced")
     interconnectSync.requestSync()
   },
 
