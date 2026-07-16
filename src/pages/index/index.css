@@ -203,6 +203,26 @@
   align-items: center;
 }
 
+.aod-offset-0 {
+  transform: translateX(-2px) translateY(-1px);
+}
+
+.aod-offset-1 {
+  transform: translateX(2px) translateY(-1px);
+}
+
+.aod-offset-2 {
+  transform: translateX(2px) translateY(1px);
+}
+
+.aod-offset-3 {
+  transform: translateX(-2px) translateY(1px);
+}
+
+.aod-offset-reset {
+  transform: translateX(0px) translateY(0px);
+}
+
 .aod-date {
   font-size: 24px;
   color: #8a8a8a;

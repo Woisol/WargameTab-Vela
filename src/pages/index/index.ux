@@ -78,7 +78,7 @@
     ></confirm-dialog>
 
     <div class="aod-page" if="{{ aodActive }}" onclick="wakeFromAod">
-      <div class="aod-content" style="{{ aodOffsetStyle }}">
+      <div class="{{ aodOffsetClass }}">
         <text class="aod-date">{{ dateText }}</text>
         <text class="aod-time">{{ clockText }}</text>
         <text class="aod-ratio">{{ ratioText }}</text>
@@ -99,11 +99,11 @@ var interconnectSync = require("../../common/scripts/interconnect-session-sync.j
 
 var CURRENT_KEY = "wargame_current_session"
 var HISTORY_KEY = "wargame_history"
-var AOD_OFFSETS = [
-  { x: -2, y: -1 },
-  { x: 2, y: -1 },
-  { x: 2, y: 1 },
-  { x: -2, y: 1 }
+var AOD_OFFSET_CLASSES = [
+  "aod-offset-0",
+  "aod-offset-1",
+  "aod-offset-2",
+  "aod-offset-3"
 ]
 
 export default {
@@ -180,7 +180,7 @@ export default {
     confirmAction: "",
     errorKey: "",
     aodActive: false,
-    aodOffsetStyle: "transform: translateX(0px) translateY(0px);",
+    aodOffsetClass: "aod-content aod-offset-reset",
     aodOffsetIndex: 0,
     aodOffsetTimerId: 0,
     aodSummaryText: "K 0 / D 0",
@@ -269,10 +269,7 @@ export default {
 
     this.resetIdleTimer()
     var direction = event && (event.direction || (event.detail && event.detail.direction))
-    if (
-      this.settings.triggerMode === "swipe" &&
-      navigation.isVerticalSwipeDirection(direction)
-    ) {
+    if (this.settings.triggerMode === "swipe" && navigation.isVerticalSwipeDirection(direction)) {
       this.addBattleEvent("kill")
     }
   },
@@ -306,10 +303,7 @@ export default {
 
     this.resetIdleTimer()
     var direction = event && (event.direction || (event.detail && event.detail.direction))
-    if (
-      this.settings.triggerMode === "swipe" &&
-      navigation.isVerticalSwipeDirection(direction)
-    ) {
+    if (this.settings.triggerMode === "swipe" && navigation.isVerticalSwipeDirection(direction)) {
       this.addBattleEvent("death")
     }
   },
@@ -651,7 +645,7 @@ export default {
     this.aodActive = false
     this.clearAodOffsetTimer()
     this.aodOffsetIndex = 0
-    this.aodOffsetStyle = "transform: translateX(0px) translateY(0px);"
+    this.aodOffsetClass = "aod-content aod-offset-reset"
     this.resetIdleTimer()
   },
 
@@ -691,16 +685,14 @@ export default {
         return
       }
 
-      self.aodOffsetIndex = (self.aodOffsetIndex + 1) % AOD_OFFSETS.length
+      self.aodOffsetIndex = (self.aodOffsetIndex + 1) % AOD_OFFSET_CLASSES.length
       self.applyAodOffset()
     }, 30000)
   },
 
   applyAodOffset() {
-    var offset = AOD_OFFSETS[this.aodOffsetIndex % AOD_OFFSETS.length]
-
-    this.aodOffsetStyle =
-      "transform: translateX(" + offset.x + "px) translateY(" + offset.y + "px);"
+    this.aodOffsetClass =
+      "aod-content " + AOD_OFFSET_CLASSES[this.aodOffsetIndex % AOD_OFFSET_CLASSES.length]
   },
 
   clearAodOffsetTimer() {
@@ -730,6 +722,7 @@ export default {
       }
 
       if (mode === "double") {
+        // 考虑用 vibrator.start .stop 稍微加强一点震动感
         vibrator.vibrate({
           mode: "short"
         })

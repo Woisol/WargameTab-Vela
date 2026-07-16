@@ -419,8 +419,28 @@ runTest("watch pages wire native battle swipes and optional option descriptions"
 
 runTest("AOD page owns a low-frequency offset timer and clears it on wake and destroy", () => {
   const indexUx = fs.readFileSync(path.join(__dirname, "../src/pages/index/index.ux"), "utf8")
+  const indexCss = fs.readFileSync(path.join(__dirname, "../src/pages/index/index.css"), "utf8")
 
-  assert.ok(indexUx.indexOf('style="{{ aodOffsetStyle }}"') >= 0)
+  assert.ok(indexUx.indexOf('class="{{ aodOffsetClass }}"') >= 0)
+  assert.equal(indexUx.indexOf('style="{{ aodOffsetStyle }}"'), -1)
+  assert.ok(indexUx.indexOf("AOD_OFFSET_CLASSES") >= 0)
+  assert.equal(indexUx.indexOf("AOD_OFFSETS"), -1)
+  assert.match(
+    indexCss,
+    /\.aod-offset-0\s*\{\s*transform:\s*translateX\(-2px\) translateY\(-1px\);\s*\}/
+  )
+  assert.match(
+    indexCss,
+    /\.aod-offset-1\s*\{\s*transform:\s*translateX\(2px\) translateY\(-1px\);\s*\}/
+  )
+  assert.match(
+    indexCss,
+    /\.aod-offset-2\s*\{\s*transform:\s*translateX\(2px\) translateY\(1px\);\s*\}/
+  )
+  assert.match(
+    indexCss,
+    /\.aod-offset-3\s*\{\s*transform:\s*translateX\(-2px\) translateY\(1px\);\s*\}/
+  )
   assert.ok(indexUx.indexOf("aodOffsetTimerId") >= 0)
   assert.ok(indexUx.indexOf("30000") >= 0)
   assert.ok(indexUx.indexOf("clearAodOffsetTimer()") >= 0)
